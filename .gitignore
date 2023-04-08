@@ -1,0 +1,14 @@
+venv/
+env/
+.git
+logs/
+temp/
+tblog/
+.DS_Store
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+*.zip
+best_model/
+.ipynb_checkpoints
+klines/
