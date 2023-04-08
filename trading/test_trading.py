@@ -5,10 +5,8 @@ from trainer.data import load_data
 
 
 results = []
-# for period in range(20, 220, 10):
-#     for deviation in range(12, 21):
-for period in range(20, 40, 10):
-    for deviation in range(12, 14):
+for period in range(20, 220, 10):
+    for deviation in range(12, 21):
         str_res = []
         dev = deviation / 10
         str_res.append(period)
@@ -51,6 +49,6 @@ for period in range(20, 40, 10):
         print(f'period={period}, dev={dev}, mean_ep_reward={mean_ep_reward}')
         str_res.append(mean_ep_reward)
         results.append(str_res)
-    df = pd.DataFrame(results, columns=['period', 'dev', 'mean_ep_rew'])
-    df.to_csv('bb_optimization.csv', index=False)
-    print(df)
+df = pd.DataFrame(results, columns=['period', 'dev', 'mean_ep_rew'])
+df.to_csv('bb_optimization.csv', index=False)
+print(df)
