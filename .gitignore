@@ -12,3 +12,4 @@ __pycache__/
 best_model/
 .ipynb_checkpoints
 klines/
+*temp*

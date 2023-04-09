@@ -36,7 +36,8 @@ def interpolate_colors(color1, color2, step):
 
     # Преобразование списка цветов в список кортежей
     # colors_list = [tuple(colors_rgb[i]) for i in range(step)]
-    colors_list = [f"rgb({colors_rgb[i][0]},{colors_rgb[i][1]},{colors_rgb[i][2]})" for i in range(step)]
+    colors_list = [
+        f"rgb({colors_rgb[i][0]},{colors_rgb[i][1]},{colors_rgb[i][2]})" for i in range(step)]
 
     return colors_list
 
@@ -80,21 +81,21 @@ def order_annotations(
     return result
 
 
-def split_array(arr:np.ndarray, steps:int):
+def split_array(arr: np.ndarray, steps: int):
     n = len(arr)
     k = n // steps
-    arrays = [arr[i*k:(i+1)*k] for i in range(steps)] 
+    arrays = [arr[i*k:(i+1)*k] for i in range(steps)]
     return [(el.min(), el.max()) for el in arrays]
 
 
 def _render_colored_candles(klines: pd.DataFrame, fig: go.Figure, prob_col: str) -> go.Figure:
     assert prob_col in klines.columns
 
-    probability_range = np.sort(klines[prob_col].unique()) 
+    probability_range = np.sort(klines[prob_col].unique())
 
     steps = len(probability_range)
     prob_ranges = split_array(probability_range, steps)
-    colors = interpolate_colors((252,3,3), (2,237,38), steps)
+    colors = interpolate_colors((252, 3, 3), (2, 237, 38), steps)
     for n in range(steps):
         df = klines[(klines[prob_col] >= prob_ranges[n][0]) &
                     (klines[prob_col] <= prob_ranges[n][1])]
@@ -119,26 +120,25 @@ def _render_colored_candles(klines: pd.DataFrame, fig: go.Figure, prob_col: str)
         ))
     return fig
 
-def render_indicators(df: pd.DataFrame, fig: go.Figure, indicators = []) -> go.Figure:
+
+def render_indicators(df: pd.DataFrame, fig: go.Figure, indicators=[]) -> go.Figure:
     for ind in indicators:
-        ind_line = go.Scatter(x=df['date'], y=df[ind['name']], mode='lines', line=dict(color=ind['color']))
+        ind_line = go.Scatter(
+            x=df['date'], y=df[ind['name']], mode='lines', line=dict(color=ind['color']))
         fig.add_trace(ind_line, row=1, col=1)
 
     return fig
 
 
 def render_candles(
-        klines: pd.DataFrame,
+        df: pd.DataFrame,
         incrace_color: str = 'cyan',
         decrace_color: str = 'gray',
-        start_depo: float | None = None,
-        start_kline: int = 0,
-        equity: list[float] | None = None,
         orders: list[Order] | None = None,
         text_annotation: str = '',
         colored_deal_probability: bool = False,
         prob_col: str = '',
-        indicators = [],
+        indicators: list[dict] = [],
 
 
 ) -> go.Figure:
@@ -148,9 +148,6 @@ def render_candles(
         klines (pd.DataFrame): data for draw the chart
         incrace_color (str, optional): incrace candle color. Defaults to 'cyan'.
         decrace_color (str, optional): decrace candle color. Defaults to 'gray'.
-        start_depo (float | None, optional): start depo for equity chart. Defaults to None.
-        start_kline (int, optional): start candle. Defaults to 0.
-        equity (list[float] | None, optional): equity data. Defaults to None.
         orders (list[Order] | None, optional): orders list. Defaults to None.
         text_annotation (bool, optional): Draw text annotation for deals.
         colored_deal_probability (bool, optional): draw colored candles for deal probability. Defaults to False.
@@ -159,19 +156,12 @@ def render_candles(
          {'name': 'bb', 'color': 'yellow'} Defaults to [].
 
     Returns:
-        go.Figure: _description_
+        go.Figure: chart figure
     """
     if colored_deal_probability:
         assert prob_col != ''
 
-    df = klines[[
-        'date',
-        'open',
-        'high',
-        'low',
-        'close',
-    ]]
-
+    # implement main candle chart
     _colors = {'inc': incrace_color, 'dec': decrace_color}
     main_chart = go.Candlestick(
         x=df['date'],
@@ -193,46 +183,59 @@ def render_candles(
         },
     )
 
-    # equity chart
-    if equity and start_depo:
-        stat_chart = go.Scatter(
-            x=df['date'],
-            y=[*[start_depo for _ in range(start_kline + 1)], *equity],
-            yaxis="y2",
-        )
+    # check separately charts
+    separately_indicators = []
+    for indicator in indicators:
+        if indicator.get('separately', False):
+            separately_indicators.append(indicator['name'])
 
+    # make subplots
+    main_chart_places = 4
+    add_specs = [*[[{}] if name !='equity' else [{'rowspan': 2}] for name in separately_indicators], *[[None] if 'equity' in separately_indicators else []]]
     fig_general = make_subplots(
-        rows=4,
+        rows=main_chart_places + len(separately_indicators) + 1 if 'equity' in separately_indicators else 0,
         cols=1,
-        specs=[
-            [{'rowspan': 3 if equity and start_depo else 4}],
-            [None],
-            [None],
-            [{} if equity and start_depo else None],
-        ],
         vertical_spacing=0.01,
         shared_xaxes=True,
-        subplot_titles=(
-            'fff',
-            None,
-            None,
-            'Equity growth',
-        )
+        specs=[
+            [{'rowspan': main_chart_places}],
+            *[[None] for _ in range(main_chart_places - 1)],
+            *add_specs,
+        ],
+        subplot_titles=[None, *[name for name in separately_indicators]]
     )
 
+    # add main candle chart
     fig_general.add_trace(main_chart, row=1, col=1)
-    if equity and start_depo:
-        fig_general.add_trace(stat_chart, row=4, col=1)
-    
-    fig_general = render_indicators(klines, fig_general, indicators)
+
+    # add another charts
+    row = main_chart_places + 1
+    for indicator in indicators:
+        if indicator.get('separately', False):
+            fig_general.add_trace(
+                go.Scatter(
+                    x=df['date'],
+                    y=df[indicator['name']],
+                    mode='lines',
+                    line=dict(color=indicator['color']),
+                ),
+                row=row,
+                col=1,
+            )
+            row += 1
+        else:
+            ind_line = go.Scatter(
+                x=df['date'], y=df[indicator['name']], mode='lines', line=dict(color=indicator['color']))
+            fig_general.add_trace(ind_line, row=1, col=1)
 
     if colored_deal_probability:
-        fig_general = _render_colored_candles(klines, fig_general, prob_col)
+        fig_general = _render_colored_candles(df, fig_general, prob_col)
 
+    # set chart parameters
     fig_general.update_layout(
         xaxis_rangeslider_visible=False,
         annotations=order_annotations(
-            klines, orders, text_annotation) if orders else [],
+            df, orders, text_annotation) if orders else [],
         template="plotly_dark",
         hovermode='x unified',
     )
@@ -240,12 +243,9 @@ def render_candles(
         {
             'plot_bgcolor': "#151822",
             'paper_bgcolor': "#151822",
-            # 'legend_orientation': "h",
         },
-        # legend=dict(y=1, x=0),
         font=dict(color='#dedddc'),
         showlegend=False,
-        # dragmode='pan',
         margin=dict(b=20, t=0, l=0, r=40),
     )
     fig_general.update_yaxes(
@@ -319,7 +319,7 @@ class TesterBaseClass:
         self.TP = TP
         self.SL = SL
         self.margin_call = False
-        self.equity: list[float] = []
+        self.equity: list[float] = [*[depo for _ in range(start_kline + 1)]]
         self.done = False
         self.do_render = False
         self._last_tick = len(klines) - 1
@@ -330,28 +330,27 @@ class TesterBaseClass:
 
         for ind in self.indicators:
             if ind['name'] not in self.klines.columns:
-                raise Exception(f"'{ind['name']}' is in indicators but not in klines ")
+                raise Exception(
+                    f"'{ind['name']}' is in indicators but not in klines ")
 
     @property
     def tick(self) -> pd.Series:
         return self._tick
-    
+
     def render(self) -> None:
         """Render the klines chart"""
         fig = render_candles(
-            klines=self.klines,
+            df=self.klines.assign(equity=self.equity),
             incrace_color='cyan',
             decrace_color='gray',
-            start_depo=self.start_depo,
-            start_kline=self.start_kline,
-            equity=self.equity,
             orders=self.orders,
             text_annotation=self._text_annotation,
-            indicators=self.indicators,
+            indicators=[*self.indicators,
+                        dict(name='equity', color='orange', separately=True)],
         )
         fig.show()
         self.print_info()
-    
+
     def print_info(self) -> None:
         print(self.info(detail=1))
 
@@ -523,10 +522,12 @@ class GymFuturesTester(TesterBaseClass):
 
         return tick_pnl
 
+
 class BBFutureTester(TesterBaseClass):
     """
         Bolliger bands strategy
     """
+
     def _on_tick(self, action: dict) -> float:
         """
         Handle of the next tick
@@ -585,11 +586,11 @@ class BBFutureTester(TesterBaseClass):
         return tick_pnl
 
 
-
 class BBFutureTester2(TesterBaseClass):
     """
         Bolliger bands strategy
     """
+
     def _on_tick(self, action: dict) -> float:
         """
         Handle of the next tick

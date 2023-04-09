@@ -1,33 +1,25 @@
 import pandas as pd
-import talib
+from .indicators import bollinger_bands, rsi
 
 
-def bollinger_bands(df, price='close', period=20, deviation=2):
-    # Копирование исходного датафрейма
-    df_copy = df.copy()
-    
-    # Расчет скользящего среднего
-    df_copy['bb_middle'] = df_copy[price].rolling(window=period).mean()
-    
-    # Расчет стандартного отклонения
-    df_copy['bb_std'] = df_copy[price].rolling(window=period).std()
-    
-    # Расчет верхней и нижней границ Bollinger Bands
-    df_copy['bb_upper'] = df_copy['bb_middle'] + (df_copy['bb_std'] * deviation)
-    df_copy['bb_lower'] = df_copy['bb_middle'] - (df_copy['bb_std'] * deviation)
-    
-    # Удаление вспомогательной колонки со стандартным отклонением
-    df_copy.drop(columns=['bb_std'], inplace=True)
-
-    return df_copy
-
-def preprocessing(klines: pd.DataFrame, kwargs: dict) -> pd.DataFrame:
+def preprocessing(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFrame, list]:
     klines = klines.copy()
-    if 'bb' in kwargs.keys():
-        bb = kwargs['bb']
-        # klines = make_bb(klines, bb['price'], bb['period'], bb['deviation'])
-        klines = bollinger_bands(klines, bb['price'], bb['period'], bb['deviation'])
-    return klines
+    indicators = []
+    keys = kwargs.keys()
+    if 'bb' in keys:
+        indicator = kwargs['bb']
+        klines = bollinger_bands(klines, indicator['price'], indicator['period'], indicator['deviation'])
+        indicators.append(dict(name='bb_upper', color='yellow'),)
+        indicators.append(dict(name='bb_middle', color='yellow'),)
+        indicators.append(dict(name='bb_lower', color='yellow'),)
+
+    if 'rsi' in keys:
+        indicator = kwargs['rsi']
+        klines = rsi(klines, indicator['price'], indicator['period'])
+        indicators.append(dict(name='rsi', color='white', separately=True),)
+
+
+    return klines, indicators
 
 
 def load_data(path: str, preprocessing_kwargs: dict = {}, split_validate_percent: int = 20, last_n: int | float=0):
@@ -49,7 +41,7 @@ def load_data(path: str, preprocessing_kwargs: dict = {}, split_validate_percent
     klines['date'] = pd.to_datetime(klines['date'], unit='ms')
 
     # meaking features
-    klines = preprocessing(klines, kwargs=preprocessing_kwargs)
+    klines, indicators = preprocessing(klines, kwargs=preprocessing_kwargs)
     klines = klines.iloc[-last_n:]
 
     # split data
@@ -59,11 +51,5 @@ def load_data(path: str, preprocessing_kwargs: dict = {}, split_validate_percent
     klines_train = klines.iloc[:train_len]
     klines_validate = klines.iloc[train_len:]
 
-    # define indicators
-    indicators = [
-        dict(name='bb_upper', color='yellow'),
-        dict(name='bb_middle', color='yellow'),
-        dict(name='bb_lower', color='yellow'),
-    ]
 
     return klines_train, klines_validate, indicators
