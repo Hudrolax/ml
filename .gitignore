@@ -13,3 +13,6 @@ best_model/
 .ipynb_checkpoints
 klines/
 *temp*
+*.nc
+*.npy
+*.npz
