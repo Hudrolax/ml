@@ -2,19 +2,21 @@ from binance.um_futures import UMFutures
 from binance.cm_futures import CMFutures
 from binance.spot import Spot
 import pandas as pd
-from .indicators import bollinger_bands, rsi, moving_average, average_true_range, macd
+from .indicators import bollinger_bands, rsi, moving_average, average_true_range, macd, obv
 import logging
 from time import sleep
 import copy
 
 logger = logging.getLogger(__name__)
 
+# adding func associations
 indicator_func = {
     'bb': bollinger_bands,
     'rsi': rsi,
     'ma': moving_average,
     'atr': average_true_range,
     'macd': macd,
+    'obv': obv,
 }
 
 def calculate_indicators(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFrame, list]:

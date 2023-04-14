@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 
 def add_prefix(column_name, prefix) -> str:
@@ -210,3 +211,37 @@ def macd(df, price='close', short_period=12, long_period=26, signal_period=9, pr
     df_copy.drop(columns=[short_ema_name, long_ema_name], inplace=True)
 
     return df_copy, [macd_name, macd_signal_name, macd_hist_name]
+
+def obv(df, close='close', volume='vol', prefix='') -> tuple[pd.DataFrame, list]:
+    """
+    Calculate the On Balance Volume (OBV) indicator for a given dataframe.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing the historical data with close and volume columns.
+        close (str, optional): Name of the close price column to use for calculation. Defaults to 'close'.
+        volume (str, optional): Name of the volume column to use for calculation. Defaults to 'volume'.
+        prefix (str, optional): Prefix to add to the column names. Defaults to an empty string.
+
+    Returns:
+        pd.DataFrame: Dataframe with the added OBV column containing the calculated OBV values.
+    """
+    # Copy the original dataframe
+    df_copy = df.copy()
+
+    # Add the prefix to the close and volume columns
+    close_col = add_prefix(close, prefix)
+    volume_col = add_prefix(volume, prefix)
+
+    # Calculate the daily returns
+    df_copy[add_prefix('return', prefix)] = df_copy[close_col].diff()
+
+    # Calculate the OBV
+    df_copy[add_prefix('obv', prefix)] = np.where(df_copy[add_prefix('return', prefix)] > 0, df_copy[volume_col], 
+                                                  np.where(df_copy[add_prefix('return', prefix)] < 0, -df_copy[volume_col], 0)).cumsum()
+
+    # Remove the temporary columns
+    df_copy.drop(columns=[
+        add_prefix('return', prefix),
+    ], inplace=True)
+
+    return df_copy, [add_prefix('obv', prefix)]

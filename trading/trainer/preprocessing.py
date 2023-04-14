@@ -67,7 +67,8 @@ def extend_dataframe(df, window):
     else:
         return df
 
-def make_observation_window(dataframes:list[pd.DataFrame], date:datetime, window:int, columns:list=[]) -> pd.DataFrame:
+def make_observation_window(dataframes:list[pd.DataFrame], date:datetime, window:int, columns:list=[],
+                            divider:bool = False) -> pd.DataFrame:
     # 1. Проверка наличия поля 'date' во всех датафреймах
     for df in dataframes:
         exist_date = False
@@ -109,6 +110,7 @@ def make_observation_window(dataframes:list[pd.DataFrame], date:datetime, window
             temp = temp[_columns]
         else:
             temp.drop(columns=[prefix + 'date'], inplace=True)
+            _columns = temp.columns
 
         temp.index = pd.RangeIndex(start=window-len(temp), stop=window)
 
@@ -130,11 +132,12 @@ def make_observation_window(dataframes:list[pd.DataFrame], date:datetime, window
         selected_data.append(temp)
 
         # divider
-        try:
-            temp['divider'] = np.zeros((window,)) 
-        except Exception as ex:
-            print(temp)
-            raise ex
+        if divider:
+            try:
+                temp['divider'] = np.zeros((window,)) 
+            except Exception as ex:
+                print(temp)
+                raise ex
     
     # Конкатенация выбранных данных в один датафрейм
     result = pd.concat(selected_data, axis=1)
