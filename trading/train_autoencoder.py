@@ -21,16 +21,20 @@ class CustomDataGenerator(Sequence):
         return np.array(batch_X), np.array(batch_y)
 
 
+print('load dataset')
 dataset = xr.open_dataarray('dataset.nc')
 
 # Разделение данных на обучающую и тестовую выборки
+print('split data')
 split_index = int(0.8 * dataset.shape[0])
 train_data = dataset[:split_index].to_numpy()[:, :, :, None]
 test_data = dataset[split_index:].to_numpy()[:, :, :, None]
 
+print('make generator')
 data_generator = CustomDataGenerator(train_data, train_data, 1000)
 validation_generator = CustomDataGenerator(test_data, test_data, 200)
 
+print('make model')
 # Создание модели автоэнкодера на основе Conv1D
 input_layer = layers.Input(shape=(100, 144, 1))
 encoder = layers.Conv2D(filters=16, kernel_size=(3, 3), activation='relu', padding='same')(input_layer)
@@ -55,6 +59,7 @@ autoencoder = Model(inputs=input_layer, outputs=decoder_output)
 
 # Компиляция и обучение модели
 autoencoder.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
+print('fit the model')
 autoencoder.fit(data_generator,
                 epochs=20,
                 batch_size=32,
@@ -68,3 +73,4 @@ autoencoder.fit(data_generator,
 
 autoencoder.evaluate(test_data, test_data)
 autoencoder.save('best_model/autoencoder2d.h5')
+print('model saved')
