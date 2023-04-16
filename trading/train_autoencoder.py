@@ -5,7 +5,9 @@ from keras import layers
 from keras.utils import Sequence
 import xarray as xr
 import numpy as np
-
+import os
+os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
+print(os.getenv('TF_GPU_ALLOCATOR'))
 
 class CustomDataGenerator(Sequence):
     def __init__(self, X, y, batch_size):
