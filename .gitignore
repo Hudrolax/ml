@@ -9,10 +9,21 @@ tblog/
 __pycache__/
 *.pyc
 *.zip
-best_model/
 .ipynb_checkpoints
+
+# models
+best_model/
+
+# klines
 klines/
+
+# all temp files
 *temp*
+
+# dataset files
 *.nc
 *.npy
 *.npz
+
+# kears models
+*.h5
