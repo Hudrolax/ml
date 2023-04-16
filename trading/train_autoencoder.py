@@ -7,7 +7,6 @@ import xarray as xr
 import numpy as np
 import os
 os.environ['TF_GPU_ALLOCATOR'] = 'cuda_malloc_async'
-print(os.getenv('TF_GPU_ALLOCATOR'))
 
 class CustomDataGenerator(Sequence):
     def __init__(self, X, y, batch_size):
@@ -24,17 +23,18 @@ class CustomDataGenerator(Sequence):
 
 
 print('load dataset')
-dataset = xr.open_dataarray('dataset.nc')
+with xr.open_dataarray('dataset.nc') as ds:
+    dataset = ds
 
-# Разделение данных на обучающую и тестовую выборки
-print('split data')
-split_index = int(0.8 * dataset.shape[0])
-train_data = dataset[:split_index].to_numpy()[:, :, :, None]
-test_data = dataset[split_index:].to_numpy()[:, :, :, None]
+    # Разделение данных на обучающую и тестовую выборки
+    print('split data')
+    split_index = int(0.8 * dataset.shape[0])
+    train_data = dataset[:split_index].to_numpy()[:, :, :, None]
+    test_data = dataset[split_index:].to_numpy()[:, :, :, None]
 
 print('make generator')
-data_generator = CustomDataGenerator(train_data, train_data, 1000)
-validation_generator = CustomDataGenerator(test_data, test_data, 200)
+data_generator = CustomDataGenerator(train_data, train_data, 500)
+validation_generator = CustomDataGenerator(test_data, test_data, 100)
 
 print('make model')
 # Создание модели автоэнкодера на основе Conv1D
@@ -63,7 +63,7 @@ autoencoder = Model(inputs=input_layer, outputs=decoder_output)
 autoencoder.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
 print('fit the model')
 autoencoder.fit(data_generator,
-                epochs=20,
+                epochs=50,
                 batch_size=32,
                 shuffle=True,
                 validation_data=validation_generator)
