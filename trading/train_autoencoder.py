@@ -31,6 +31,8 @@ with xr.open_dataarray('dataset.nc') as ds:
     split_index = int(0.8 * dataset.shape[0])
     train_data = dataset[:split_index].to_numpy()[:, :, :, None]
     test_data = dataset[split_index:].to_numpy()[:, :, :, None]
+    train_data2 = dataset[:split_index].to_numpy()
+    test_data2 = dataset[split_index:].to_numpy()
 
 print('make generator')
 data_generator = CustomDataGenerator(train_data, train_data, 500)
@@ -67,12 +69,40 @@ autoencoder.fit(data_generator,
                 batch_size=32,
                 shuffle=True,
                 validation_data=validation_generator)
-# autoencoder.fit(train_data, train_data,
-#                 epochs=20,
-#                 batch_size=32,
-#                 shuffle=True,
-#                 validation_data=(test_data, test_data))
 
 autoencoder.evaluate(test_data, test_data)
 autoencoder.save('best_model/autoencoder2d.h5')
+print('model saved')
+
+# Энкодер
+input_layer = layers.Input(shape=(100, 144))
+encoder = layers.Conv1D(filters=16, kernel_size=3, activation='relu', padding='same')(input_layer)
+encoder = layers.MaxPooling1D(pool_size=2, padding='same')(encoder)
+encoder = layers.Conv1D(filters=32, kernel_size=3, activation='relu', padding='same')(encoder)
+encoder = layers.MaxPooling1D(pool_size=2, padding='same')(encoder)
+encoder = layers.Conv1D(filters=64, kernel_size=3, activation='relu', padding='same')(encoder)
+encoder_output = layers.MaxPooling1D(pool_size=2, padding='same')(encoder)
+
+# Декодер
+decoder = layers.Conv1D(filters=64, kernel_size=3, activation='relu', padding='same')(encoder_output)
+decoder = layers.UpSampling1D(size=2)(decoder)
+decoder = layers.Conv1D(filters=32, kernel_size=3, activation='relu', padding='same')(decoder)
+decoder = layers.UpSampling1D(size=2)(decoder)
+decoder = layers.Conv1D(filters=16, kernel_size=3, activation='relu', padding='same')(decoder)
+decoder = layers.UpSampling1D(size=2)(decoder)
+decoder = layers.Conv1D(filters=144, kernel_size=3, activation='linear', padding='same')(decoder)
+
+# Обрезание выхода декодера до нужного размера
+decoder_output = layers.Cropping1D(cropping=(2, 2))(decoder)
+
+# Создание автоэнкодера
+autoencoder = Model(inputs=input_layer, outputs=decoder_output)
+# Компиляция и обучение модели
+autoencoder.compile(optimizer=Adam(learning_rate=0.001), loss='mse')
+autoencoder.fit(train_data, train_data,
+                epochs=50,
+                batch_size=32,
+                shuffle=True,
+                validation_data=(test_data, test_data))
+autoencoder.save('best_model/autoencoder1d.h5')
 print('model saved')
