@@ -195,7 +195,6 @@ def render_candles(
     if 'equity' in separately_indicators:
         add_specs = [*add_specs, [None]]
     rows = main_chart_places + len(separately_indicators) + (1 if 'equity' in separately_indicators else 0)
-    print(rows)
     fig_general = make_subplots(
         rows=rows,
         cols=1,
