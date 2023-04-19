@@ -19,6 +19,7 @@ indicator_func = {
     'obv': obv,
 }
 
+
 def calculate_indicators(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFrame, list]:
     """Calculate indicators for klines.
 
@@ -66,6 +67,7 @@ def calculate_indicators(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFra
 
     return klines, indicators
 
+
 def load_data(
     path: str,
     symbol: str,
@@ -73,7 +75,10 @@ def load_data(
     preprocessing_kwargs: dict = {},
     split_validate_percent: int = 20,
     last_n: int | float = 0,
-    rename_columns = False,
+    rename_columns=False,
+    min_date=None,
+    max_date=None,
+    dataset=None,
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[dict]]:
     """Load, preprocessing and return train and validate dataframes and indicator dict
 
@@ -83,6 +88,9 @@ def load_data(
         split_validate_percent (int, optional): Percent of validate df. Defaults to 20.
         last_n (int | float, optional): Use only last_n klines. Defaults to 0.
         rename_columns (bool): rename columns. Add symbol and timeframe.
+        min_date (datetime | None): Minimum date in klines. Doesn't metter, if dataset not is None.
+        max_date (datetime | None): Maximum date in klines. Doesn't metter, if dataset not is None.
+        dataset (xr.dataarray | None): xarray for sync dates
 
     Returns:
         _type_: tuple (train_klines, val_klines, indicators_dict_for_env)
@@ -95,10 +103,20 @@ def load_data(
     klines = klines.rename({'open_time': 'date'}, axis=1)
     klines['date'] = pd.to_datetime(klines['date'], unit='ms')
 
-
     # meaking features
     klines, indicators = calculate_indicators(
-        klines, kwargs=preprocessing_kwargs)
+        klines,
+        kwargs=preprocessing_kwargs,
+    )
+    if not dataset is None:
+        klines = klines[(klines['date'] >= dataset.date.values.min()) & (klines['date'] <= dataset.date.values.max())]
+    else:
+        if not min_date is None:
+            klines = klines[klines['date'] >= min_date]
+
+        if not max_date is None:
+            klines = klines[klines['date'] <= max_date]
+
     klines = klines.iloc[-last_n:]
 
     # rename columns
@@ -107,7 +125,7 @@ def load_data(
         for col in klines.columns:
             new_cols[col] = f'{symbol}_{tf}-{col}'
         klines = klines.rename(new_cols, axis=1)
-    
+
     # drop NaN after calculating indicators
     klines = klines.dropna()
 
@@ -120,27 +138,29 @@ def load_data(
 
     return klines_train, klines_validate, indicators
 
-def load_data_from_list(symbols:str, tfs:str, preprocessing_kwargs = {}) -> list[pd.DataFrame]:
+
+def load_data_from_list(symbols: str, tfs: str, preprocessing_kwargs={}) -> list[pd.DataFrame]:
     result = []
     for symbol in symbols:
         for tf in tfs:
             load_data_kwargs = dict(
-                path = 'klines/',
-                symbol = symbol,
+                path='klines/',
+                symbol=symbol,
                 tf=tf,
-                preprocessing_kwargs = preprocessing_kwargs,
-                split_validate_percent = 0,
+                preprocessing_kwargs=preprocessing_kwargs,
+                split_validate_percent=0,
                 # rename_columns = True,
             )
 
             df, _, _ = load_data(**load_data_kwargs)
             result.append(df)
-    
+
     return result
 
 
-def download_klines(file:str, symbol:str, timeframe:str='15m') -> None:
-    cols = ['open_time', 'open', 'high', 'low', 'close', 'vol', 'close_time', 'qa_vol', 'trades',]
+def download_klines(file: str, symbol: str, timeframe: str = '15m') -> None:
+    cols = ['open_time', 'open', 'high', 'low', 'close',
+            'vol', 'close_time', 'qa_vol', 'trades',]
     clients = [CMFutures, UMFutures, Spot]
 
     logger.info(f'Try to load history for {symbol}_{timeframe}')
@@ -185,7 +205,8 @@ def download_klines(file:str, symbol:str, timeframe:str='15m') -> None:
             df.to_csv(file, index=False)
 
             df_temp = df.head(1).copy()
-            df_temp['open_time'] = pd.to_datetime(df_temp['open_time'], unit='ms')
+            df_temp['open_time'] = pd.to_datetime(
+                df_temp['open_time'], unit='ms')
             min_date = df_temp['open_time'].min()
             logger.info(f'Load old klines until {min_date}.')
             sleep(0.5)
@@ -194,7 +215,7 @@ def download_klines(file:str, symbol:str, timeframe:str='15m') -> None:
 
     # load new klines
     try:
-        for i  in range(9999999):
+        for i in range(9999999):
             max_timestamp = df['open_time'].max() + 1
             res = _client.klines(symbol, timeframe, startTime=max_timestamp)
             if len(res) == 0:
@@ -205,16 +226,17 @@ def download_klines(file:str, symbol:str, timeframe:str='15m') -> None:
             df = pd.concat([df, _df], ignore_index=True)
             df.to_csv(file, index=False)
             df_temp = df.tail(1).copy()
-            df_temp['open_time'] = pd.to_datetime(df_temp['open_time'], unit='ms')
+            df_temp['open_time'] = pd.to_datetime(
+                df_temp['open_time'], unit='ms')
             max_date = df_temp['open_time'].max()
-            
+
             logger.info(f'Load new klines until {max_date}.')
             sleep(0.5)
     except Exception as ex:
         logger.error(ex)
 
 
-def download_history_from_symbols_list(symbols: list[str], tfs:list[str], path='klines/') -> None:
+def download_history_from_symbols_list(symbols: list[str], tfs: list[str], path='klines/') -> None:
     """Loding history for list of pairs/timeframes
 
     Args:
@@ -223,4 +245,5 @@ def download_history_from_symbols_list(symbols: list[str], tfs:list[str], path='
     """
     for symbol in symbols:
         for tf in tfs:
-            download_klines(file=path + f'{symbol}_{tf}.csv', symbol=symbol, timeframe=tf)
+            download_klines(
+                file=path + f'{symbol}_{tf}.csv', symbol=symbol, timeframe=tf)

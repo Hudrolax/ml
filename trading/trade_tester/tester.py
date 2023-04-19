@@ -377,7 +377,7 @@ class TesterBaseClass:
             'pnl_percent': round(self.balance * 100 / self.start_depo - 100, 2),
         }
 
-    def open_orders(self) -> list[Order]:
+    def get_open_orders(self) -> list[Order]:
         """Returns open order list"""
         result = []
         for order in self.orders:
@@ -411,11 +411,20 @@ class TesterBaseClass:
         if self.margin_call or self.n_tick >= self._last_tick:
             self.done = True
 
-    def open_order(self, action: Actions, vol: float, TP: float = 0, SL: float = 0) -> bool:
-        """Open the order"""
+    def open_order(self, order_type: Actions, vol: float, TP: float = 0, SL: float = 0) -> Order:
+        """Open order function"""
+        # set TP and SL to inf if it's not set
+        if TP == 0:
+            if order_type == Actions.Buy:
+                TP = float('inf')
+        if SL == 0:
+            if order_type == Actions.Sell:
+                SL = float('inf')
+
+        # make the order
         order = Order(
             id=self.next_id,
-            type=action,
+            type=order_type,
             open_time=self._tick['date'],
             open=self._tick['open'],
             vol=vol,
@@ -424,7 +433,7 @@ class TesterBaseClass:
         )
         self.orders.append(order)
         self.next_id += 1
-        return True
+        return order
 
     def on_tick(self, *args, **kwargs) -> ...:
         if self.n_tick > self._last_tick:
@@ -436,7 +445,7 @@ class TesterBaseClass:
         self.n_tick += 1
 
         # get open orders
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         # Calculate P&L
         general_pnl = 0
@@ -484,7 +493,7 @@ class GymFuturesTester(TesterBaseClass):
         assert action.get('risk') is not None
 
         # get open orders
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         # close open orders
         tick_pnl = 0
@@ -503,7 +512,7 @@ class GymFuturesTester(TesterBaseClass):
             return tick_pnl
 
         # get open orders again
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         # Open orders.
         if not open_orders:
@@ -517,7 +526,7 @@ class GymFuturesTester(TesterBaseClass):
                 _sl = self.tick['open'] + _sl
 
             self.open_order(
-                action=Actions(action['action']),
+                order_type=Actions(action['action']),
                 vol=self.balance * action['risk'],
                 TP=_tp,
                 SL=_sl,
@@ -547,7 +556,7 @@ class BBFutureTester(TesterBaseClass):
         act = action.get('action')
 
         # get open orders
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         # close open orders
         tick_pnl = 0
@@ -562,7 +571,7 @@ class BBFutureTester(TesterBaseClass):
                     tick_pnl += self.close_order(order)
 
         # get open orders again
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         gap = (tick['bb_upper'] - tick['bb_lower']) / 4
         lower_buy = float('inf')
@@ -577,12 +586,12 @@ class BBFutureTester(TesterBaseClass):
         if len(open_orders) < 7:
             if bid <= tick['bb_lower'] and bid < lower_buy - gap and act == 1:
                 self.open_order(
-                    action=Actions.Buy,
+                    order_type=Actions.Buy,
                     vol=self.balance * action['risk'] * (len(open_orders) + 1),
                 )
             elif bid >= tick['bb_upper'] and bid > highest_sell + gap and act == 0:
                 self.open_order(
-                    action=Actions.Sell,
+                    order_type=Actions.Sell,
                     vol=self.balance * action['risk'] * (len(open_orders) + 1),
                 )
 
@@ -591,7 +600,7 @@ class BBFutureTester(TesterBaseClass):
 
 class BBFutureTester2(TesterBaseClass):
     """
-        Bolliger bands strategy
+        Bolliger bands strategy. Open and close orders by bollinger bands indicator
     """
 
     def _on_tick(self, action: dict) -> float:
@@ -599,7 +608,7 @@ class BBFutureTester2(TesterBaseClass):
         Handle of the next tick
         Args:
             action: dict:
-                action: int (0-'Sell', 1-'Buy', 2-'Pass'),
+                action: int (0-'Pass', 1-'Buy'),
                 risk: float32 (percent volume of balance),
         """
         assert action.get('action') is not None
@@ -610,7 +619,7 @@ class BBFutureTester2(TesterBaseClass):
         act = action.get('action')
 
         # get open orders
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         # close open orders
         tick_pnl = 0
@@ -625,19 +634,76 @@ class BBFutureTester2(TesterBaseClass):
                     tick_pnl += self.close_order(order)
 
         # get open orders again
-        open_orders = self.open_orders()
+        open_orders = self.get_open_orders()
 
         # Open orders.
         if len(open_orders) == 0:
             if bid <= tick['bb_lower']:
                 self.open_order(
-                    action=Actions.Buy,
+                    order_type=Actions.Buy,
                     vol=self.balance * action['risk'] * (len(open_orders) + 1),
                 )
             elif bid >= tick['bb_upper']:
                 self.open_order(
-                    action=Actions.Sell,
+                    order_type=Actions.Sell,
                     vol=self.balance * action['risk'] * (len(open_orders) + 1),
+                )
+
+        return tick_pnl
+
+
+class BBFutureTester3(TesterBaseClass):
+    """
+        Calculate TP and SL with bollinger bands indicator.
+    """
+
+    def _on_tick(self, action: dict) -> float:
+        """
+        Handle of the next tick
+        Args:
+            action: dict:
+                action: int (0-'Pass', 1-'Buy'),
+                risk: float32 (percent volume of balance),
+        """
+        assert action.get('action') is not None
+        assert action.get('risk') is not None
+
+        tick = self.tick
+        bid = tick['open']
+        open_action = action.get('action')
+
+        _tp_ticks = tick['bb_middle'] - tick['bb_lower']
+        _sl_ticks = _tp_ticks / 2
+
+        # get open orders
+        open_orders = self.get_open_orders()
+
+        tick_pnl = 0
+        # close open orders and update TP and SL
+        for order in open_orders:
+            if order.type == Actions.Buy:
+                # Buy
+                order.TP = order.open + _tp_ticks
+                order.SL = order.open - _sl_ticks
+
+                if bid >= order.TP or bid <= order.SL or self.done:
+                    tick_pnl += self.close_order(order)
+            else:
+                # Sell
+                if bid <= order.TP or bid >= order.SL or self.done:
+                    tick_pnl += self.close_order(order)
+
+        # get open orders again
+        open_orders = self.get_open_orders()
+
+        # Open orders.
+        if len(open_orders) == 0:
+            if open_action == 1:
+                self.open_order(
+                    order_type=Actions.Buy,
+                    vol=self.balance * action['risk'] * (len(open_orders) + 1),
+                    TP = bid + _tp_ticks,
+                    SL = bid - _sl_ticks,
                 )
 
         return tick_pnl
