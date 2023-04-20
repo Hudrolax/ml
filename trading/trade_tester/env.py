@@ -145,6 +145,8 @@ class TradingEnv(Env):
             tester (tester class | None): tester class. If None GymFuturesTester on default.
             expand_dims (bool): Expand observation dims for using Conv2d layers.
         """
+        super(TradingEnv, self).__init__()
+
         # 0 - Sell, 1 - Buy, 2 - Pass
         self.action_space = Discrete(3)
         self.klines: pd.DataFrame = klines
@@ -166,8 +168,7 @@ class TradingEnv(Env):
             high=1
         )
 
-    def step(self, action: int):
-        action = int(action)
+    def step(self, action: int | float):
         """Apply action"""
         reward = self.tester.on_tick({
             'action': action,
@@ -222,3 +223,10 @@ class TradingEnv2Actions(TradingEnv):
         super().__init__(*args, **kwargs)
         # 0 - Sell, 1 - Buy
         self.action_space = Discrete(2)
+
+
+class TradingEnv1BoxAction(TradingEnv):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        # 0 - Sell, 1 - Buy
+        self.action_space = Box(low=0, high=1, shape=(1,), dtype=float)

@@ -38,9 +38,13 @@ class CustomCNN2d(nn.Module):
         self.cnn = nn.Sequential(
             nn.Conv2d(in_channels=channels, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(),
             nn.MaxPool2d(2, stride=2, padding=1), 
             nn.Dropout2d(p = 0.1),
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
             nn.ReLU(),
             nn.MaxPool2d(2, stride=2, padding=1),
             nn.Dropout2d(p = 0.1),
@@ -59,10 +63,10 @@ class CustomCNN2d(nn.Module):
 
 def mlp_net(in_dim) -> nn.Sequential:
     return nn.Sequential(
-            nn.Linear(in_dim, 256),
+            nn.Linear(in_dim, 2048),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Linear(256, 64),
+            nn.Linear(2048, 64),
             nn.ReLU(),
             nn.Dropout(p=0.1),
         )

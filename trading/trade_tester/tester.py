@@ -191,10 +191,13 @@ def render_candles(
 
     # make subplots
     main_chart_places = 4
-    add_specs = [*[[{}] if name !='equity' else [{'rowspan': 2}] for name in separately_indicators]]
+    add_specs = [*[[{}] if name != 'equity' else [{'rowspan': 2}]
+                   for name in separately_indicators]]
     if 'equity' in separately_indicators:
         add_specs = [*add_specs, [None]]
-    rows = main_chart_places + len(separately_indicators) + (1 if 'equity' in separately_indicators else 0)
+    rows = main_chart_places + \
+        len(separately_indicators) + \
+        (1 if 'equity' in separately_indicators else 0)
     fig_general = make_subplots(
         rows=rows,
         cols=1,
@@ -654,7 +657,7 @@ class BBFutureTester2(TesterBaseClass):
 
 class BBFutureTester3(TesterBaseClass):
     """
-        Calculate TP and SL with bollinger bands indicator.
+        This tester use BB strategy and returns momental reward.
     """
 
     def _on_tick(self, action: dict) -> float:
@@ -662,48 +665,43 @@ class BBFutureTester3(TesterBaseClass):
         Handle of the next tick
         Args:
             action: dict:
-                action: int (0-'Pass', 1-'Buy'),
+                action: float (0-'Sell', 1-'Buy'),
                 risk: float32 (percent volume of balance),
         """
-        assert action.get('action') is not None
-        assert action.get('risk') is not None
 
         tick = self.tick
-        bid = tick['open']
-        open_action = action.get('action')
+        price = tick['open']
+        open_action = action['action']
+        pnl_percent = 0
 
-        _tp_ticks = tick['bb_middle'] - tick['bb_lower']
-        _sl_ticks = _tp_ticks / 2
+        def calculate_pnl(open_price, close_price, action):
+            fee = 0.0004
+            vol = 100
+            fee_sum = vol * fee + vol / open_price * close_price * fee
+            pnl = vol / open_price * close_price - vol - fee_sum
+            pnl_percent = pnl / vol
+            return pnl_percent if action == 1 else -pnl_percent
 
-        # get open orders
-        open_orders = self.get_open_orders()
+        if open_action > 0.8 and price < tick['bb_lower']:
+            # buy strategy
+            df = self.klines.iloc[self.n_tick:]
+            mask = df['close'] >= df['bb_upper']
+            try:
+                close = df.loc[mask, 'close'].iloc[0]
+            except:
+                close = tick['close']
+            pnl_percent = calculate_pnl(price, close, 1)
 
-        tick_pnl = 0
-        # close open orders and update TP and SL
-        for order in open_orders:
-            if order.type == Actions.Buy:
-                # Buy
-                order.TP = order.open + _tp_ticks
-                order.SL = order.open - _sl_ticks
+            # print(f"action {open_action}. time {tick['date']} open {price} close {close}, pnl {pnl_percent}")
+        elif open_action < 0.2 and price > tick['bb_upper']:
+            # sell strategy
+            df = self.klines.iloc[self.n_tick:]
+            mask = df['close'] <= df['bb_lower']
+            try:
+                close = df.loc[mask, 'close'].iloc[0]
+            except:
+                close = tick['close']
+            pnl_percent = calculate_pnl(price, close, 0)
+            # print(f"action {open_action}. time {tick['date']} open {price} close {close}, pnl {pnl_percent}")
 
-                if bid >= order.TP or bid <= order.SL or self.done:
-                    tick_pnl += self.close_order(order)
-            else:
-                # Sell
-                if bid <= order.TP or bid >= order.SL or self.done:
-                    tick_pnl += self.close_order(order)
-
-        # get open orders again
-        open_orders = self.get_open_orders()
-
-        # Open orders.
-        if len(open_orders) == 0:
-            if open_action == 1:
-                self.open_order(
-                    order_type=Actions.Buy,
-                    vol=self.balance * action['risk'] * (len(open_orders) + 1),
-                    TP = bid + _tp_ticks,
-                    SL = bid - _sl_ticks,
-                )
-
-        return tick_pnl
+        return pnl_percent
