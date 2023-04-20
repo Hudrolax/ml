@@ -9,16 +9,23 @@ import xarray as xr
 
 dataset = xr.open_dataarray('dataset.nc')
 load_data_kwargs = dict(
-    path = 'klines/',
-    symbol = 'DOGEUSDT',
-    tf = '15m',
-    preprocessing_kwargs = dict(
-        bb = dict(price='close', period=20, deviation=1.2, render=True),
+    path='klines/',
+    symbol='DOGEUSDT',
+    tf='15m',
+    preprocessing_kwargs=dict(
+        bb=dict(price='close', period=20, deviation=1.2, render=True),
     ),
-    split_validate_percent = 0,
-    dataset = dataset,
+    split_validate_percent=0,
+    dataset=dataset,
 )
 train_klines, val_klines, indicators = load_data(**load_data_kwargs)
+
+# Get only fitted for open/close klines
+mask = ((train_klines['open'] >= train_klines['bb_upper']) |
+        (train_klines['open'] <= train_klines['bb_lower']) |
+        (train_klines['close'] >= train_klines['bb_upper']) |
+        (train_klines['close'] <= train_klines['bb_lower']))
+train_klines = train_klines[mask].reset_index(drop=True)
 
 env_kwargs = dict(
     env_class='TradingEnv1BoxAction',
@@ -27,7 +34,7 @@ env_kwargs = dict(
     data=dataset,
     expand_dims=True,
     indicators=indicators,
-    b_size=300,
+    b_size=100,
 )
 
 env = make_env(**env_kwargs)

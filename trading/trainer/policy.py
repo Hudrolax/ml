@@ -70,9 +70,9 @@ def get_model(**model_kwargs):
     save_name = model_kwargs.get('save_name', 'ppo')
     lr = model_kwargs.get('lr', 3e-4)
     batch_size = model_kwargs.get('batch_size', 32)
-    n_steps = model_kwargs.get('n_steps', 4096)
+    n_steps = model_kwargs.get('n_steps', 128)
     verbose = model_kwargs.get('verbose', 1)
-    gamma = model_kwargs.get('gamma', 0.8)
+    gamma = model_kwargs.get('gamma', 0.99)
     tensorboard_log = model_kwargs.get('tensorboard_log', 'tblog')
 
     try:

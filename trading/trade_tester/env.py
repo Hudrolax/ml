@@ -210,7 +210,7 @@ class TradingEnv(Env):
 
         self.tester = self.tester_class(
             klines=klines,
-            start_kline=1,
+            start_kline=0,
             **self.tester_kwargs
         )
         self.state = self._get_observations()

@@ -63,10 +63,10 @@ class CustomCNN2d(nn.Module):
 
 def mlp_net(in_dim) -> nn.Sequential:
     return nn.Sequential(
-            nn.Linear(in_dim, 2048),
+            nn.Linear(in_dim, 128),
             nn.ReLU(),
             nn.Dropout(p=0.1),
-            nn.Linear(2048, 64),
+            nn.Linear(128, 64),
             nn.ReLU(),
             nn.Dropout(p=0.1),
         )

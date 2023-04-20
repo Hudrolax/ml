@@ -313,6 +313,9 @@ class TesterBaseClass:
         required_columns = ['date', 'open', 'close', 'high', 'low']
         check_required_columns(required_columns)
 
+        if len(klines) == 0:
+            raise Exception('TESTER: klines length is 0!')
+
         self.klines = klines
         self.start_depo = depo
         self.balance = depo
