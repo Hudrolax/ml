@@ -80,12 +80,18 @@ def get_model(**model_kwargs):
             path = save_path + save_name
             model = PPO.load(path)
             model.set_env(env)
+            message = f'Loding model from `{path}`...'
             logger.info(f'Loding model from `{path}`...')
+            if logger.getEffectiveLevel() > logging.WARNING:
+                print(message)
         else:
             raise Exception('Create new model')
     except:
         # Define the model
-        logger.info(f'Define new model with kwargs:\n{model_kwargs}')
+        message = f'Define new model with kwargs:\n{model_kwargs}'
+        logger.info(message)
+        if logger.getEffectiveLevel() > logging.WARNING:
+            print(message)
         model = PPO(
             policy=CustomActorCriticPolicy,
             env=env,

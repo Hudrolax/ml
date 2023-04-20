@@ -25,13 +25,16 @@ class SaveBestModelCallback(BaseCallback):
             ep_reward = infos[0]['episode']['r']
             self.mean_ep_reward.append(ep_reward)
             mean_reward = sum(self.mean_ep_reward) / len(self.mean_ep_reward)
-            print(f'mean rew: {mean_reward}')
+            print(f'mean reward: {mean_reward}')
             # print(f'n_cals: {self.n_calls}')
 
             if mean_reward > self.best_mean_reward and self.n_calls > 2e4:
                 self.best_mean_reward = mean_reward
                 self.model.save(os.path.join(self.save_path, self.save_name))
                 save_mean_reward_to_file(path=self.save_path + 'mean_reward.txt', mean_reward=mean_reward)
-                logger.info(f'Model with mean reward {mean_reward} saved to {self.save_path + self.save_name}')
+                message = f'Model with mean reward {mean_reward} saved to {self.save_path + self.save_name}'
+                logger.info(message)
+                if logger.getEffectiveLevel() > logging.WARNING:
+                    print(message)
 
         return True
