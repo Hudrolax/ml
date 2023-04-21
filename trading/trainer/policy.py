@@ -2,7 +2,7 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3 import PPO
 from stable_baselines3.common.policies import ActorCriticPolicy 
 from stable_baselines3.common.torch_layers import MlpExtractor
-from .nn import CustomCNN2d, mlp_net
+from .nn import CustomCNN2d, CustomCNN1d, mlp_net
 import logging
 
 
@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class CustomFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space):
-        cnn = CustomCNN2d(observation_space)
+        cnn = CustomCNN1d(observation_space)
         super(CustomFeaturesExtractor, self).__init__(observation_space, cnn.output_size)
         self.cnn = cnn
 
@@ -70,7 +70,7 @@ def get_model(**model_kwargs):
     save_name = model_kwargs.get('save_name', 'ppo')
     lr = model_kwargs.get('lr', 3e-4)
     batch_size = model_kwargs.get('batch_size', 32)
-    n_steps = model_kwargs.get('n_steps', 128)
+    n_steps = model_kwargs.get('n_steps', 4096)
     verbose = model_kwargs.get('verbose', 1)
     gamma = model_kwargs.get('gamma', 0.99)
     tensorboard_log = model_kwargs.get('tensorboard_log', 'tblog')

@@ -614,15 +614,13 @@ class BBFutureTester2(TesterBaseClass):
         Handle of the next tick
         Args:
             action: dict:
-                action: int (0-'Pass', 1-'Buy'),
+                action: float (0-'Pass', 1-'Buy'),
                 risk: float32 (percent volume of balance),
         """
-        assert action.get('action') is not None
-        assert action.get('risk') is not None
 
         tick = self.tick
         bid = tick['open']
-        act = action.get('action')
+        act = action['action']
 
         # get open orders
         open_orders = self.get_open_orders()
@@ -632,11 +630,11 @@ class BBFutureTester2(TesterBaseClass):
         for order in open_orders:
             if order.type == Actions.Buy:
                 # Buy
-                if bid >= tick['bb_upper'] or self.done:
+                if bid >= tick['bb_upper'] or (bid >= tick['bb_middle'] and order.pnl > 0) or self.done:
                     tick_pnl += self.close_order(order)
             else:
                 # Sell
-                if bid <= tick['bb_lower'] or self.done:
+                if bid <= tick['bb_lower'] or (bid <= tick['bb_middle'] and order.pnl > 0) or self.done:
                     tick_pnl += self.close_order(order)
 
         # get open orders again
@@ -644,12 +642,12 @@ class BBFutureTester2(TesterBaseClass):
 
         # Open orders.
         if len(open_orders) == 0:
-            if bid <= tick['bb_lower']:
+            if bid <= tick['bb_lower'] and act > 0.8:
                 self.open_order(
                     order_type=Actions.Buy,
                     vol=self.balance * action['risk'] * (len(open_orders) + 1),
                 )
-            elif bid >= tick['bb_upper']:
+            elif bid >= tick['bb_upper'] and act > 0.2:
                 self.open_order(
                     order_type=Actions.Sell,
                     vol=self.balance * action['risk'] * (len(open_orders) + 1),

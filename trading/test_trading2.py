@@ -15,26 +15,19 @@ load_data_kwargs = dict(
     preprocessing_kwargs=dict(
         bb=dict(price='close', period=20, deviation=1.2, render=True),
     ),
-    split_validate_percent=0,
+    split_validate_percent=20,
     dataset=dataset,
 )
 train_klines, val_klines, indicators = load_data(**load_data_kwargs)
 
-# Get only fitted for open/close klines
-mask = ((train_klines['open'] >= train_klines['bb_upper']) |
-        (train_klines['open'] <= train_klines['bb_lower']) |
-        (train_klines['close'] >= train_klines['bb_upper']) |
-        (train_klines['close'] <= train_klines['bb_lower']))
-train_klines = train_klines[mask].reset_index(drop=True)
-
 env_kwargs = dict(
     env_class='TradingEnv1BoxAction',
-    tester='BBFutureTester3',
+    tester='BBFutureTester2',
     klines=train_klines,
     data=dataset,
-    expand_dims=True,
+    expand_dims=False,
     indicators=indicators,
-    b_size=100,
+    b_size=1000,
 )
 
 env = make_env(**env_kwargs)
@@ -42,7 +35,6 @@ env = make_env(**env_kwargs)
 # set model kwargs
 model_kwargs = dict(
     load_model=True,
-    gamma=0,
 )
 
 # train model
@@ -54,12 +46,12 @@ model = train_model(
 
 # model = get_model(env=env)
 
-# done = False
-# obs = env.reset()
-# while not done:
-#     # action = model.predict(obs)
-#     action = env.action_space.sample()
-#     obs, reward, done, info = env.step(action)
-#     env.render()
+done = False
+obs = env.reset()
+while not done:
+    # action = model.predict(obs)
+    action = env.action_space.sample()
+    obs, reward, done, info = env.step(action)
+    env.render()
 
 dataset.close()
