@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class CustomFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space):
-        cnn = CustomCNN1d(observation_space)
+        cnn = CustomCNN2d(observation_space)
         super(CustomFeaturesExtractor, self).__init__(observation_space, cnn.output_size)
         self.cnn = cnn
 
@@ -59,7 +59,7 @@ def get_model(**model_kwargs):
         Model: Trained model.
     """
     expected_params = ['env', 'load_model', 'save_path', 'save_name', 'lr',
-                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log']
+                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log', 'cnn']
     for key in model_kwargs:
         if key not in expected_params:
             raise KeyError(f'Parameter `{key}` not expected for building model.')
@@ -82,7 +82,7 @@ def get_model(**model_kwargs):
             model.set_env(env)
             message = f'Loding model from `{path}`...'
             logger.info(f'Loding model from `{path}`...')
-            if logger.getEffectiveLevel() > logging.WARNING:
+            if logger.getEffectiveLevel() >= logging.WARNING:
                 print(message)
         else:
             raise Exception('Create new model')
@@ -90,7 +90,7 @@ def get_model(**model_kwargs):
         # Define the model
         message = f'Define new model with kwargs:\n{model_kwargs}'
         logger.info(message)
-        if logger.getEffectiveLevel() > logging.WARNING:
+        if logger.getEffectiveLevel() >= logging.WARNING:
             print(message)
         model = PPO(
             policy=CustomActorCriticPolicy,

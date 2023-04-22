@@ -13,7 +13,7 @@ load_data_kwargs = dict(
     symbol='DOGEUSDT',
     tf='15m',
     preprocessing_kwargs=dict(
-        bb=dict(price='close', period=20, deviation=1.2, render=True),
+        bb=dict(price='close', period=20, deviation=2, render=True),
     ),
     split_validate_percent=20,
     dataset=dataset,
@@ -25,7 +25,7 @@ env_kwargs = dict(
     tester='BBFutureTester2',
     klines=train_klines,
     data=dataset,
-    expand_dims=False,
+    expand_dims=True,
     indicators=indicators,
     b_size=1000,
 )
@@ -44,14 +44,14 @@ model = train_model(
     model_kwargs=model_kwargs,
 )
 
-# model = get_model(env=env)
+# model = get_model(load_model=True, env=env)
 
-done = False
-obs = env.reset()
-while not done:
-    # action = model.predict(obs)
-    action = env.action_space.sample()
-    obs, reward, done, info = env.step(action)
-    env.render()
+# done = False
+# obs = env.reset()
+# while not done:
+#     # action = model.predict(obs)
+#     action = env.action_space.sample()
+#     obs, reward, done, info = env.step(action)
+#     env.render()
 
 dataset.close()
