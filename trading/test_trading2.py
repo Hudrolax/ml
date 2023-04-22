@@ -25,7 +25,7 @@ env_kwargs = dict(
     tester='BBFutureTester2',
     klines=train_klines,
     data=dataset,
-    expand_dims=True,
+    expand_dims=False,
     indicators=indicators,
     b_size=1000,
 )

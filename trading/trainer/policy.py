@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 class CustomFeaturesExtractor(BaseFeaturesExtractor):
     def __init__(self, observation_space):
-        cnn = CustomCNN2d(observation_space)
+        cnn = CustomCNN1d(observation_space)
         super(CustomFeaturesExtractor, self).__init__(observation_space, cnn.output_size)
         self.cnn = cnn
 

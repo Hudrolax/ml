@@ -8,31 +8,31 @@ class CustomCNN1d(nn.Module):
         channels = observation_space.shape[-1]
 
         self.cnn = nn.Sequential(
-            nn.Conv1d(in_channels=channels, out_channels=32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=32, out_channels=32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-
-            nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=64, out_channels=64, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-
-            nn.Conv1d(in_channels=64, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.Conv1d(in_channels=128, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2, stride=2),
-
-            nn.Conv1d(in_channels=128, out_channels=256, kernel_size=3, stride=1, padding=1),
+            nn.Conv1d(in_channels=channels, out_channels=256, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv1d(in_channels=256, out_channels=256, kernel_size=3, stride=1, padding=1),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+
+            nn.Conv1d(in_channels=256, out_channels=512, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=512, out_channels=512, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+
+            nn.Conv1d(in_channels=512, out_channels=1024, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=1024, out_channels=1024, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.MaxPool1d(kernel_size=2, stride=2),
+
+            nn.Conv1d(in_channels=1024, out_channels=2048, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=2048, out_channels=2048, kernel_size=3, stride=1, padding=1),
+            nn.ReLU(),
+            nn.Conv1d(in_channels=2048, out_channels=2048, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
             nn.MaxPool1d(kernel_size=2, stride=2),
 
@@ -90,13 +90,13 @@ class CustomCNN2d(nn.Module):
 
 def mlp_net(in_dim) -> nn.Sequential:
     return nn.Sequential(
-            nn.Linear(in_dim, 256),
+            nn.Linear(in_dim, 512),
             nn.ReLU(),
             nn.Dropout(p=0.2),
-            nn.Linear(256, 128),
+            nn.Linear(512, 256),
             nn.ReLU(),
             nn.Dropout(p=0.2),
-            nn.Linear(128, 64),
+            nn.Linear(256, 64),
             nn.ReLU(),
             nn.Dropout(p=0.2),
         )

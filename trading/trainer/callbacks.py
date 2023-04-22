@@ -24,11 +24,14 @@ class SaveBestModelCallback(BaseCallback):
         if infos[0]:
             ep_reward = infos[0]['episode']['r']
             self.mean_ep_reward.append(ep_reward)
+            if len(self.mean_ep_reward) > 3:
+                del(self.mean_ep_reward[0])
+
             mean_reward = sum(self.mean_ep_reward) / len(self.mean_ep_reward)
             print(f'mean reward: {mean_reward}')
             # print(f'n_cals: {self.n_calls}')
 
-            if mean_reward > self.best_mean_reward and self.n_calls > 2e4:
+            if mean_reward > self.best_mean_reward and self.n_calls > 10_000:
                 self.best_mean_reward = mean_reward
                 self.model.save(os.path.join(self.save_path, self.save_name))
                 save_mean_reward_to_file(path=self.save_path + 'mean_reward.txt', mean_reward=mean_reward)
