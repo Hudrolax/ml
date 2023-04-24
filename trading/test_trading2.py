@@ -21,7 +21,7 @@ load_data_kwargs = dict(
 train_klines, val_klines, indicators = load_data(**load_data_kwargs)
 
 env_kwargs = dict(
-    env_class='TradingEnv1BoxAction',
+    env_class='TradingEnv2BoxAction',
     tester='BBTester',
     klines=train_klines,
     data=dataset,

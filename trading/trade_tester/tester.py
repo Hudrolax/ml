@@ -25,6 +25,9 @@ class BBTester(TesterBaseClass):
 
         if not isinstance(actions, np.ndarray):
             raise ValueError(f'actions must be a ndarray. Actions is {actions}')
+        
+        assert isinstance(actions[0], np.float32)
+        assert isinstance(actions[1], np.float32)
 
         # get open orders
         open_orders = self.get_open_orders()

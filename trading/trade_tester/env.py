@@ -11,3 +11,8 @@ class TradingEnv2DisceteActions(BaseTradingEnv):
 class TradingEnv1BoxAction(BaseTradingEnv):
     def set_action_space(self):
         self.action_space = Box(low=0, high=1, shape=(1,), dtype=np.float32)
+
+
+class TradingEnv2BoxAction(BaseTradingEnv):
+    def set_action_space(self):
+        self.action_space = Box(low=0, high=1, shape=(2,), dtype=np.float32)
