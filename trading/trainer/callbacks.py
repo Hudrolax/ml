@@ -24,7 +24,7 @@ class SaveBestModelCallback(BaseCallback):
         if infos[0]:
             ep_reward = infos[0]['episode']['r']
             self.mean_ep_reward.append(ep_reward)
-            if len(self.mean_ep_reward) > 3:
+            if len(self.mean_ep_reward) > 10:
                 del(self.mean_ep_reward[0])
 
             mean_reward = sum(self.mean_ep_reward) / len(self.mean_ep_reward)

@@ -4,7 +4,21 @@ from plotly.subplots import make_subplots
 from .data_classes import Order, Actions
 import numpy as np
 from matplotlib.colors import ColorConverter
+import math
 
+
+def count_zeros(number) -> int:
+    """Function counts zeros before significant digit"""
+    if number >= 1 or number <= 0:
+        return 0
+    return math.ceil(abs(math.log10(number))) - 1 
+
+def sround(x: float) -> float:
+    """Smart round."""
+    try:
+        return round(x, count_zeros(x) + 3)
+    except ValueError:
+        return 0
 
 def interpolate_colors(color1, color2, step):
     """
@@ -358,7 +372,6 @@ class TesterBaseClass:
                         dict(name='equity', color='orange', separately=True)],
         )
         fig.show()
-        self.print_info()
 
     def print_info(self) -> None:
         print(self.info(detail=1))
@@ -367,20 +380,47 @@ class TesterBaseClass:
         """return the trade statistic"""
         profit_orders = 0
         loss_orders = 0
+        orders_pnl = []
         for order in self.orders:
+            orders_pnl.append(order.pnl)
             if order.close:
                 if order.pnl > 0:
                     profit_orders += 1
                 else:
                     loss_orders += 1
 
+        pnl_std = sround(np.array(orders_pnl).std())
+        mean_pnl = sround(np.array(orders_pnl).mean())
+
+        growth_arr = np.diff(np.array(self.equity), n=1)
+        negative_growth = growth_arr[growth_arr < 0]
+        mean_growth = sround(growth_arr.mean())
+
+        growth_std = growth_arr.std()
+        sharp = sround(mean_growth / growth_std)
+        sortino = sround(abs(negative_growth.mean() / negative_growth.std()))
+
+        pnl = sround(self.balance - self.start_depo)
+        pnl_percent = sround(self.balance * 100 / self.start_depo - 100)
+        try:
+            pl_ratio = sround(profit_orders / (profit_orders + loss_orders))
+        except ZeroDivisionError:
+            pl_ratio = 0
+
         return {
-            'balance': round(self.balance, 8),
+            'balance': sround(self.balance),
             'orders': len(self.orders) if detail < 2 else self.orders,
             'profit_orders': profit_orders,
             'loss_orders': loss_orders,
-            'pnl': round(self.balance - self.start_depo, 8),
-            'pnl_percent': round(self.balance * 100 / self.start_depo - 100, 2),
+            'p/l ratio': pl_ratio,
+            'pnl': pnl,
+            'pnl_percent': pnl_percent,
+            'ticks': self.n_tick - self.start_kline,
+            'mean pnl': mean_pnl,
+            'PNL std': pnl_std,
+            'mean_growth': mean_growth,
+            'sharp': sharp,
+            'sotrino': sortino,
         }
 
     def get_open_orders(self) -> list[Order]:

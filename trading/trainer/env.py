@@ -34,8 +34,8 @@ def make_env(**make_env_kwargs) -> DummyVecEnv:
     env_class = make_env_kwargs['env_class']
     klines = make_env_kwargs['klines']
     data = make_env_kwargs.get('data', None)
-    b_size = make_env_kwargs.get('b_size', 1000)
-    tester = make_env_kwargs.get('tester', 'BBFutureTester')
+    b_size = make_env_kwargs.get('b_size', None)
+    tester = make_env_kwargs.get('tester', None)
     depo = make_env_kwargs.get('depo', 1000)
     TP = make_env_kwargs.get('TP', 0)
     SL = make_env_kwargs.get('SL', 0)
@@ -43,6 +43,9 @@ def make_env(**make_env_kwargs) -> DummyVecEnv:
     num_envs = make_env_kwargs.get('num_envs', 1)
     risk = make_env_kwargs.get('risk', 0.2)
     expand_dims = make_env_kwargs.get('expand_dims', False)
+
+    if tester is None:
+        raise ValueError('"tester" parameter must be passed!')
 
     env_kwargs = dict(
         klines=klines,

@@ -54,12 +54,13 @@ def get_model(**model_kwargs):
         verbose (int): Verbose level for learning the model. Read model.learn() help.
         gamma (int): Gamma param for learning the model. Read model.learn() help.
         tensorboard_log (str): Path for saving tensorboard log. Read model.learn() help.
+        n_epochs
 
     Returns:
         Model: Trained model.
     """
     expected_params = ['env', 'load_model', 'save_path', 'save_name', 'lr',
-                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log', 'cnn']
+                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log', 'n_epochs']
     for key in model_kwargs:
         if key not in expected_params:
             raise KeyError(f'Parameter `{key}` not expected for building model.')
@@ -69,8 +70,9 @@ def get_model(**model_kwargs):
     save_path = model_kwargs.get('save_path', 'best_model/')
     save_name = model_kwargs.get('save_name', 'ppo')
     lr = model_kwargs.get('lr', 3e-4)
-    batch_size = model_kwargs.get('batch_size', 32)
-    n_steps = model_kwargs.get('n_steps', 4096)
+    batch_size = model_kwargs.get('batch_size', 64)
+    n_steps = model_kwargs.get('n_steps', batch_size * 100)
+    n_epochs = model_kwargs.get('n_epochs', 2)
     verbose = model_kwargs.get('verbose', 1)
     gamma = model_kwargs.get('gamma', 0.99)
     tensorboard_log = model_kwargs.get('tensorboard_log', 'tblog')
@@ -100,7 +102,8 @@ def get_model(**model_kwargs):
             verbose=verbose,
             batch_size=batch_size,
             n_steps=n_steps,
-            learning_rate=lr
+            learning_rate=lr,
+            n_epochs=n_epochs,
         )
 
     return model

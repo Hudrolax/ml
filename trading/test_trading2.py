@@ -22,19 +22,19 @@ train_klines, val_klines, indicators = load_data(**load_data_kwargs)
 
 env_kwargs = dict(
     env_class='TradingEnv1BoxAction',
-    tester='BBFutureTester2',
+    tester='BBTester',
     klines=train_klines,
     data=dataset,
     expand_dims=False,
     indicators=indicators,
-    b_size=1000,
+    b_size=3000,
 )
 
 env = make_env(**env_kwargs)
 
 # set model kwargs
 model_kwargs = dict(
-    load_model=True,
+    # load_model=True,
 )
 
 # train model
