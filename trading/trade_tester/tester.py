@@ -14,7 +14,7 @@ class BBTester(TesterBaseClass):
         Handle of the next tick
         Args:
             action: dict:
-                action: float (0-'Pass', 1-'Buy'),
+                action: float 
                 risk: float32 (percent volume of balance),
         """
 

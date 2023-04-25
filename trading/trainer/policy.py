@@ -1,44 +1,8 @@
-from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3 import PPO
-from stable_baselines3.common.policies import ActorCriticPolicy 
-from stable_baselines3.common.torch_layers import MlpExtractor
-from .nn import CustomCNN2d, CustomCNN1d, mlp_net
+from .custom_policy import get_custom_policy
 import logging
 
-
 logger = logging.getLogger(__name__)
-
-
-class CustomFeaturesExtractor(BaseFeaturesExtractor):
-    def __init__(self, observation_space):
-        cnn = CustomCNN1d(observation_space)
-        super(CustomFeaturesExtractor, self).__init__(observation_space, cnn.output_size)
-        self.cnn = cnn
-
-    def forward(self, observations):
-        return self.cnn(observations)
-
-
-class CustomMlpExtractor(MlpExtractor):
-    def __init__(self, *args, **kwargs):
-        super(CustomMlpExtractor, self).__init__(*args, **kwargs)
-
-        # Change default net structure
-        # self.shared_net = mlp_net(args[0])
-        self.policy_net = mlp_net(args[0])
-        self.value_net = mlp_net(args[0])
-
-
-class CustomActorCriticPolicy(ActorCriticPolicy):
-    def __init__(self, *args, **kwargs):
-        kwargs['features_extractor_class'] = CustomFeaturesExtractor
-        kwargs['normalize_images'] = False
-        super(CustomActorCriticPolicy, self).__init__(*args, **kwargs)
-
-    def _build_mlp_extractor(self) -> None:
-        self.mlp_extractor = CustomMlpExtractor(self.features_dim, self.net_arch,
-                                                 self.activation_fn, self.device)
-
 
 def get_model(**model_kwargs):
     """Function load or define a new model.
@@ -54,13 +18,16 @@ def get_model(**model_kwargs):
         verbose (int): Verbose level for learning the model. Read model.learn() help.
         gamma (int): Gamma param for learning the model. Read model.learn() help.
         tensorboard_log (str): Path for saving tensorboard log. Read model.learn() help.
-        n_epochs
+        n_epochs (str): Number of agent training epochs
+        features_extractor (str): name of registered features extractor
+        value_net (str): name of registered value neural network
 
     Returns:
         Model: Trained model.
     """
     expected_params = ['env', 'load_model', 'save_path', 'save_name', 'lr',
-                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log', 'n_epochs']
+                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log', 'n_epochs',
+                        'features_extractor', 'value_net']
     for key in model_kwargs:
         if key not in expected_params:
             raise KeyError(f'Parameter `{key}` not expected for building model.')
@@ -73,6 +40,8 @@ def get_model(**model_kwargs):
     batch_size = model_kwargs.get('batch_size', 64)
     n_steps = model_kwargs.get('n_steps', batch_size * 100)
     n_epochs = model_kwargs.get('n_epochs', 2)
+    features_extractor = model_kwargs.get('features_extractor', 'Flatten')
+    value_net = model_kwargs.get('value_net', 'mlp_128_64')
     verbose = model_kwargs.get('verbose', 1)
     gamma = model_kwargs.get('gamma', 0.99)
     tensorboard_log = model_kwargs.get('tensorboard_log', 'tblog')
@@ -89,13 +58,14 @@ def get_model(**model_kwargs):
         else:
             raise Exception('Create new model')
     except:
-        # Define the model
-        message = f'Define new model with kwargs:\n{model_kwargs}'
+        # Define a model
+        message = f'Define a new model with kwargs:\n{model_kwargs}'
         logger.info(message)
         if logger.getEffectiveLevel() >= logging.WARNING:
             print(message)
+
         model = PPO(
-            policy=CustomActorCriticPolicy,
+            policy=get_custom_policy(features_extractor=features_extractor, value_nn=value_net),
             env=env,
             tensorboard_log=tensorboard_log,
             gamma=gamma,

@@ -34,7 +34,7 @@ class SaveBestModelCallback(BaseCallback):
             if mean_reward > self.best_mean_reward and self.n_calls > 10_000:
                 self.best_mean_reward = mean_reward
                 self.model.save(os.path.join(self.save_path, self.save_name))
-                save_mean_reward_to_file(path=self.save_path + 'mean_reward.txt', mean_reward=mean_reward)
+                save_mean_reward_to_file(path=self.save_path + f'{self.save_name}_meanrew.txt', mean_reward=mean_reward)
                 message = f'Model with mean reward {mean_reward} saved to {self.save_path + self.save_name}'
                 logger.info(message)
                 if logger.getEffectiveLevel() >= logging.WARNING:

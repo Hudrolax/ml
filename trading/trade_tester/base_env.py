@@ -11,7 +11,7 @@ class BaseTradingEnv(Env):
 
     def __init__(self, klines: pd.DataFrame, data: xr.DataArray | None, 
                  risk: float = 1, b_size: int | None=None, tester='GymFuturesTester', tester_kwargs=None,
-                 expand_dims=False, verbose: bool = False) -> None:
+                 verbose: bool = False) -> None:
         """Env for binance futures strategy tester
         Args:
             klines (pd.Dataframe): history klines and indicators
@@ -20,8 +20,7 @@ class BaseTradingEnv(Env):
             b_size (int | None): klines batch size for tester. If None - all klines placed in tester.
             text_annotation (bool): draw text annottions
             tester (tester class | None): tester class. If None GymFuturesTester on default.
-            expand_dims (bool): Expand observation dims for using Conv2d layers.
-            verbose (bool): print additional information
+            verbose (int): level for printing additional information
         """
         super(BaseTradingEnv, self).__init__()
 
@@ -38,7 +37,6 @@ class BaseTradingEnv(Env):
 
         self.tester = None
         self.tester_kwargs = tester_kwargs
-        self.expand_dims = expand_dims
         self._risk: float = risk
         self._b_size = b_size
         self.total_reward = 0
@@ -77,11 +75,11 @@ class BaseTradingEnv(Env):
 
         """Set info"""
         info = {}
-        # info = self.tester.info(detail=0)
 
         done = self.tester.done
-        if self.verbose and done:
+        if self.verbose > 0 and done:
             self.tester.print_info()
+            info = self.tester.info(detail=0)
 
         # Return step information
         return self.state, reward, done, info
@@ -93,8 +91,6 @@ class BaseTradingEnv(Env):
         """Return an observation"""
         if self.data is not None:
             obs = self.data.sel(date=self.tester._tick['date']).values
-            if self.expand_dims:
-                obs = np.expand_dims(obs, axis=0)
         else:
             obs = np.array([1])
         return obs

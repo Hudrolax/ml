@@ -2,10 +2,15 @@ from binance.um_futures import UMFutures
 from binance.cm_futures import CMFutures
 from binance.spot import Spot
 import pandas as pd
+import numpy as np
 from .indicators import bollinger_bands, rsi, moving_average, average_true_range, macd, obv
+from .preprocessing import make_observation_window
 import logging
 from time import sleep
 import copy
+import xarray as xr
+import os
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +24,10 @@ indicator_func = {
     'obv': obv,
 }
 
+def get_directory_path() -> str:
+    script_path = os.path.abspath(sys.argv[0])
+    directory_path = os.path.dirname(script_path)
+    return directory_path
 
 def calculate_indicators(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFrame, list]:
     """Calculate indicators for klines.
@@ -63,10 +72,9 @@ def calculate_indicators(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFra
 
     if len(kwargs) > 0 and len(indicators) == 0:
         logger.warning(
-            'The length of the indicators list equals 0, but the data is preprocessed.')
+            'Length of indicators list equals 0, but the data is preprocessed.')
 
     return klines, indicators
-
 
 def load_data(
     path: str,
@@ -78,8 +86,8 @@ def load_data(
     rename_columns=False,
     min_date=None,
     max_date=None,
-    dataset=None,
-) -> tuple[pd.DataFrame, pd.DataFrame, list[dict]]:
+    load_dataset=False,
+) -> tuple[pd.DataFrame, pd.DataFrame, list[dict], xr.DataArray | None]:
     """Load, preprocessing and return train and validate dataframes and indicator dict
 
     Args:
@@ -90,24 +98,35 @@ def load_data(
         rename_columns (bool): rename columns. Add symbol and timeframe.
         min_date (datetime | None): Minimum date in klines. Doesn't metter, if dataset not is None.
         max_date (datetime | None): Maximum date in klines. Doesn't metter, if dataset not is None.
-        dataset (xr.dataarray | None): xarray for sync dates
+        load_dataset (bool): Load an observation dataset by xarray. Dataset path should be `data/{symbol}_{tf}.nc`.
 
     Returns:
         _type_: tuple (train_klines, val_klines, indicators_dict_for_env)
     """
     full_path = f'{path}{symbol}_{tf}.csv'
-    # load data
+    # load klines data
     last_n = int(last_n)
     klines = pd.read_csv(
         full_path)[['open_time', 'open', 'high', 'low', 'close', 'vol', 'trades']]
     klines = klines.rename({'open_time': 'date'}, axis=1)
     klines['date'] = pd.to_datetime(klines['date'], unit='ms')
 
-    # meaking features
+    # calculate indicators
     klines, indicators = calculate_indicators(
         klines,
         kwargs=preprocessing_kwargs,
     )
+
+    # open observation dataset
+    dataset = None
+    if load_dataset:
+        dataset_path = f'{get_directory_path()}/data/{symbol}_{tf}.nc'
+        try:
+            dataset = xr.open_dataarray(dataset_path)
+            logger.debug(f'Dataset from {dataset_path} loaded.')
+        except FileNotFoundError:
+            logger.warning(f'Dataset file `{dataset_path}` not found.')
+
     if not dataset is None:
         klines = klines[(klines['date'] >= dataset.date.values.min()) & (klines['date'] <= dataset.date.values.max())]
     else:
@@ -136,7 +155,7 @@ def load_data(
     klines_train = klines.iloc[:train_len]
     klines_validate = klines.iloc[train_len:]
 
-    return klines_train, klines_validate, indicators
+    return klines_train, klines_validate, indicators, dataset
 
 
 def load_data_from_list(symbols: str, tfs: str, preprocessing_kwargs={}) -> list[pd.DataFrame]:
@@ -152,11 +171,10 @@ def load_data_from_list(symbols: str, tfs: str, preprocessing_kwargs={}) -> list
                 # rename_columns = True,
             )
 
-            df, _, _ = load_data(**load_data_kwargs)
+            df, _, _, _ = load_data(**load_data_kwargs)
             result.append(df)
 
     return result
-
 
 def download_klines(file: str, symbol: str, timeframe: str = '15m') -> None:
     cols = ['open_time', 'open', 'high', 'low', 'close',
@@ -235,7 +253,6 @@ def download_klines(file: str, symbol: str, timeframe: str = '15m') -> None:
     except Exception as ex:
         logger.error(ex)
 
-
 def download_history_from_symbols_list(symbols: list[str], tfs: list[str], path='klines/') -> None:
     """Loding history for list of pairs/timeframes
 
@@ -247,3 +264,58 @@ def download_history_from_symbols_list(symbols: list[str], tfs: list[str], path=
         for tf in tfs:
             download_klines(
                 file=path + f'{symbol}_{tf}.csv', symbol=symbol, timeframe=tf)
+
+def make_observation_dataset(**kwargs) -> None:
+    """Make and save observation dataframe for symbol / timeframe
+    Kwargs:
+        symbols (list): list of symbols for making a dataset. First symbol is general.
+        tfs (list): list of timeframes for making a dataset. First timeframe is general.
+        preprocessing_kwargs (dict): keyword arguments for making indicator Series
+
+        example:
+            kwargs = dict(
+                symbols = ['DOGEUSDT', 'DOGEBTC', 'BTCUSDT'],
+                tfs = ['15m', '30m', '1h', '4h'],
+                preprocessing_kwargs = dict(
+                                bb = dict(period=20, deviation=2),
+                                rsi = dict(period=14),
+                                ma = dict(period=20),
+                                obv = dict(),
+                            ),
+            )
+    """
+    symbol = kwargs['symbols'][0]
+    tf = kwargs['tfs'][0]
+    dfs = load_data_from_list(**kwargs)
+
+    # find min and max date over dfs
+    min_dates = []
+    for df in dfs:
+        min_dates.append(df['date'].min())
+    min_date = max(min_dates)
+
+    # shrink dataset so that the minimum date is the same
+    dfs2 = []
+    for df in dfs:
+        dfs2.append(df[df['date'] >= min_date].reset_index(drop=True))
+    dfs = dfs2
+
+    dataset = []
+    window = 100
+    length = len(dfs[0]) - window
+    for i in range(1600+window+1, window+length):
+        a = make_observation_window(dfs, date=dfs[0].iloc[i][0], window=window)
+        dataset.append(a)
+    
+    dataset = np.array(dataset)
+
+    # Make xarray.DataArray wit dims
+    date = dfs[0][:dataset.shape[0]]['date'].values
+    dataset = xr.DataArray(
+        dataset,
+        coords={'date': date},
+        dims=['date', 'n', 'channel']
+    )
+    dataset_path =f'{get_directory_path()}/data/{symbol}_{tf}.nc' 
+    dataset.to_netcdf(dataset_path)
+    logger.info(f'Observation dataset saved to {dataset_path}')

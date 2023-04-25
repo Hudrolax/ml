@@ -1,4 +1,3 @@
-# from trade_tester.env import TradingEnv2Actions
 from stable_baselines3.common.vec_env import DummyVecEnv
 from stable_baselines3.common.monitor import Monitor
 import importlib 
@@ -20,10 +19,9 @@ def make_env(**make_env_kwargs) -> DummyVecEnv:
         TP (float): Take profit in percent for the tester. Read tester docs.
         SL (float): Stop loss in percent fot the tester. Read tester docs.
         indicators (dict['name': <collumn name>, 'color': <line color>]): Dict of indicators. Read tester docs.
-        expand_dims (bool): Expand observation dims for using Conv2d layers.
     """
     expected_params = ['env_class', 'klines', 'data', 'b_size', 'tester',
-                       'depo', 'TP', 'SL', 'indicators', 'num_envs', 'risk', 'expand_dims']
+                       'depo', 'TP', 'SL', 'indicators', 'num_envs', 'risk', 'verbose']
     for key in make_env_kwargs:
         if key not in expected_params:
             raise KeyError(
@@ -42,7 +40,7 @@ def make_env(**make_env_kwargs) -> DummyVecEnv:
     indicators = make_env_kwargs.get('indicators', [])
     num_envs = make_env_kwargs.get('num_envs', 1)
     risk = make_env_kwargs.get('risk', 0.2)
-    expand_dims = make_env_kwargs.get('expand_dims', False)
+    verbose = make_env_kwargs.get('verbose', 0)
 
     if tester is None:
         raise ValueError('"tester" parameter must be passed!')
@@ -53,13 +51,13 @@ def make_env(**make_env_kwargs) -> DummyVecEnv:
         b_size=b_size,
         tester=tester,
         risk=risk,
-        expand_dims=expand_dims,
         tester_kwargs=dict(
             depo=depo,
             TP=TP,
             SL=SL,
             indicators=indicators,
         ),
+        verbose=verbose,
     )
 
     tester_module = importlib.import_module('trade_tester.env')

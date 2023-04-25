@@ -85,6 +85,8 @@ class CustomCNN2d(nn.Module):
 
     def forward(self, x):
         # x = x.transpose(1, 2)
+        if len(x.shape) == 3:
+            x = x.unsqueeze(1)
         return self.cnn(x)
 
 
@@ -129,13 +131,29 @@ class CustomCNN1dReverse(nn.Module):
         return self.cnn(x)
 
 
-def mlp_net(in_dim) -> nn.Sequential:
+class CustomFlatten(nn.Module):
+    def __init__(self, observation_space) -> None:
+        super().__init__()
+        channels = observation_space.shape[-1]
+
+        self.flatten = nn.Flatten()
+
+        # Set network output size
+        test_tensor = torch.randn(1, observation_space.shape[0], channels)
+        x = self.forward(test_tensor)
+        self.output_size = x.shape[1] 
+
+    def forward(self, x):
+        return self.flatten(x)
+
+
+def mlp_128_64(in_dim) -> nn.Sequential:
     return nn.Sequential(
             nn.Linear(in_dim, 128),
             nn.ReLU(),
-            nn.Dropout(p=0.1),
+            nn.Dropout(p=0.5),
 
             nn.Linear(128, 64),
             nn.ReLU(),
-            nn.Dropout(p=0.1),
+            nn.Dropout(p=0.5),
         )
