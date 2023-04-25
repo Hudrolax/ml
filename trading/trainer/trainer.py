@@ -12,6 +12,6 @@ def train_model(total_timesteps: int, model_kwargs=dict(), env_kwargs=dict()):
     save_name = model_kwargs.get('save_name', 'ppo')
     callback = SaveBestModelCallback(save_path=save_path, save_name=save_name)
 
-    model.learn(total_timesteps=total_timesteps, callback=callback)
+    model.learn(total_timesteps=total_timesteps, callback=callback, tb_log_name=save_name)
 
     return model
