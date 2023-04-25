@@ -52,7 +52,7 @@ class CustomCNN1d(nn.Module):
 class CustomCNN2d(nn.Module):
     def __init__(self, observation_space) -> None:
         super(CustomCNN2d, self).__init__()
-        channels = observation_space.shape[0]
+        channels = 1
 
         self.cnn = nn.Sequential(
             nn.Conv2d(in_channels=channels, out_channels=8, kernel_size=3, padding=1),
@@ -84,7 +84,7 @@ class CustomCNN2d(nn.Module):
         self.output_size = x.shape[1] 
 
     def forward(self, x):
-        # x = x.transpose(1, 2)
+        x = x.transpose(1, 2)
         if len(x.shape) == 3:
             x = x.unsqueeze(1)
         return self.cnn(x)
@@ -146,6 +146,18 @@ class CustomFlatten(nn.Module):
     def forward(self, x):
         return self.flatten(x)
 
+# FC networks for MLP Extractor
+
+def mlp_256_64(in_dim) -> nn.Sequential:
+    return nn.Sequential(
+            nn.Linear(in_dim, 256),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+        )
 
 def mlp_128_64(in_dim) -> nn.Sequential:
     return nn.Sequential(
@@ -154,6 +166,17 @@ def mlp_128_64(in_dim) -> nn.Sequential:
             nn.Dropout(p=0.5),
 
             nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+        )
+
+def mlp_64_64(in_dim) -> nn.Sequential:
+    return nn.Sequential(
+            nn.Linear(in_dim, 64),
+            nn.ReLU(),
+            nn.Dropout(p=0.5),
+
+            nn.Linear(64, 64),
             nn.ReLU(),
             nn.Dropout(p=0.5),
         )

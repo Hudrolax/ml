@@ -1,7 +1,7 @@
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.torch_layers import MlpExtractor
-from .nn import CustomCNN2d, CustomCNN1d, CustomCNN1dReverse, CustomFlatten, mlp_128_64
+from .nn import *
 
 
 registered_features_extractors = {
@@ -12,7 +12,9 @@ registered_features_extractors = {
 }
 
 registered_value_nets = {
+    'mlp_64_64': mlp_64_64,
     'mlp_128_64': mlp_128_64,
+    'mlp_256_64': mlp_256_64,
 }
 
 

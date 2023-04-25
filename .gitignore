@@ -27,3 +27,6 @@ klines/
 
 # kears models
 *.h5
+
+# pipeline result
+pipeline.csv

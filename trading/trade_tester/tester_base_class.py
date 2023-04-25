@@ -412,15 +412,15 @@ class TesterBaseClass:
             'orders': len(self.orders) if detail < 2 else self.orders,
             'profit_orders': profit_orders,
             'loss_orders': loss_orders,
-            'p/l ratio': pl_ratio,
+            'pl_ratio': pl_ratio,
             'pnl': pnl,
             'pnl_percent': pnl_percent,
             'ticks': self.n_tick - self.start_kline,
             'mean pnl': mean_pnl,
-            'PNL std': pnl_std,
+            'PNL_std': pnl_std,
             'mean_growth': mean_growth,
             'sharp': sharp,
-            'sotrino': sortino,
+            'sortino': sortino,
         }
 
     def get_open_orders(self) -> list[Order]:

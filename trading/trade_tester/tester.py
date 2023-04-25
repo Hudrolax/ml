@@ -45,9 +45,9 @@ class BBTester(TesterBaseClass):
                     tick_pnl += self.close_order(order)
         
         if tick_pnl > 0:
-            reward += 15
+            reward += 10
         elif tick_pnl < 0:
-            reward -= 10
+            reward -= 15
 
         # get open orders again
         open_orders = self.get_open_orders()
