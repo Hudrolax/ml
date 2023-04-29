@@ -56,9 +56,24 @@ def get_custom_mlp_extractor(mlp_nn):
 
             # Change default net structure
             # self.shared_net = mlp_net(args[0])
+
+            # policy net used by actor after features extractor
             self.policy_net = mlp_nn(args[0])
+
+            # value_net used by critic after features extractor
             self.value_net = mlp_nn(args[0])
 
+            # getting output tensor size from last layers
+            for layer in reversed(self.policy_net):
+                if isinstance(layer, nn.Linear) or isinstance(layer, nn.Flatten):
+                    self.latent_dim_pi = layer.out_features
+                    break
+
+            for layer in reversed(self.value_net):
+                if isinstance(layer, nn.Linear) or isinstance(layer, nn.Flatten):
+                    self.latent_dim_vf = layer.out_features
+                    break
+            
     return CustomMlpExtractor
 
 

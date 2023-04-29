@@ -5,6 +5,7 @@ from .trainer import train_model
 import pandas as pd
 import numpy as np
 import logging
+from itertools import product
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,7 @@ class Pipeline:
             self.total_timesteps = kwargs['total_timesteps']
             self.indicators = kwargs.get('indicators', {})
             self.continue_learning = kwargs.get('continue_learning', False)
+            self.dataset_shape = kwargs.get('dataset_shape', '')
         except KeyError as e:
             key = e.args[0]
             logger.critical(f'Pipeline: Unexpected kwarg `{key}`')
@@ -59,6 +61,7 @@ class Pipeline:
             preprocessing_kwargs=preprocessing_kwargs,
             split_validate_percent=20,
             load_dataset=True,
+            dataset_shape=self.dataset_shape,
         )
         return load_data(**load_data_kwargs)
 
@@ -85,14 +88,14 @@ class Pipeline:
             save_name=f'ppo_{features_extractor}_{value_net}'
         )
 
-    def _loop(self):
-        for symbol in self.symbols:
-            for tf in self.tfs:
-                for env_class in self.env_classes:
-                    for tester in self.testers:
-                        for fe in self.features_extractors:
-                            for value_net in self.value_nets:
-                                yield symbol, tf, env_class, tester, fe, value_net
+    # def _loop(self):
+    #     for symbol in self.symbols:
+    #         for tf in self.tfs:
+    #             for env_class in self.env_classes:
+    #                 for tester in self.testers:
+    #                     for fe in self.features_extractors:
+    #                         for value_net in self.value_nets:
+    #                             yield symbol, tf, env_class, tester, fe, value_net
 
     def validate_model(self, env, times: int, model=None, random=False):
         m_reward = []
@@ -126,7 +129,9 @@ class Pipeline:
         return mn(m_reward), mn(m_balance), mn(m_orders), mn(m_pl_ratio), mn(m_sharp), mn(m_sortino)
 
     def fit(self):
-        for symbol, tf, env_class, tester, fe, value_net in self._loop():
+        iterator = product(self.symbols, self.tfs, self.env_classes, self.testers,
+                            self.features_extractors, self.value_nets)
+        for symbol, tf, env_class, tester, fe, value_net in iterator:
             logger.info(f'Fit {symbol}_{tf}, {env_class}, {tester}, {fe}, {value_net}')
 
             result_timesteps = self.total_timesteps

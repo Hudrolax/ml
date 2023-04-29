@@ -11,6 +11,7 @@ import copy
 import xarray as xr
 import os
 import sys
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -22,6 +23,19 @@ indicator_func = {
     'atr': average_true_range,
     'macd': macd,
     'obv': obv,
+}
+
+timeframes_in_minutes = {
+    '1m': 1,
+    '5m': 5,
+    '15m': 15,
+    '30m': 30,
+    '1h': 60,
+    '2h': 120,
+    '4h': 240,
+    '1d': 1440,
+    '1w': 10080,
+    '1m': 43200,
 }
 
 def get_directory_path() -> str:
@@ -87,6 +101,7 @@ def load_data(
     min_date=None,
     max_date=None,
     load_dataset=False,
+    dataset_shape='',
 ) -> tuple[pd.DataFrame, pd.DataFrame, list[dict], xr.DataArray | None]:
     """Load, preprocessing and return train and validate dataframes and indicator dict
 
@@ -99,6 +114,7 @@ def load_data(
         min_date (datetime | None): Minimum date in klines. Doesn't metter, if dataset not is None.
         max_date (datetime | None): Maximum date in klines. Doesn't metter, if dataset not is None.
         load_dataset (bool): Load an observation dataset by xarray. Dataset path should be `data/{symbol}_{tf}.nc`.
+        dataset_shape (str): Shape of dataset like "100x144". If empty - load default dataset.
 
     Returns:
         _type_: tuple (train_klines, val_klines, indicators_dict_for_env)
@@ -120,7 +136,8 @@ def load_data(
     # open observation dataset
     dataset = None
     if load_dataset:
-        dataset_path = f'{get_directory_path()}/data/{symbol}_{tf}.nc'
+        shape_postfix = '' if dataset_shape == '' else f'_{dataset_shape}'
+        dataset_path = f'{get_directory_path()}/data/{symbol}_{tf}{shape_postfix}.nc'
         try:
             dataset = xr.open_dataarray(dataset_path)
             logger.debug(f'Dataset from {dataset_path} loaded.')
@@ -274,6 +291,7 @@ def make_observation_dataset(**kwargs) -> None:
 
         example:
             kwargs = dict(
+                window = 100,
                 symbols = ['DOGEUSDT', 'DOGEBTC', 'BTCUSDT'],
                 tfs = ['15m', '30m', '1h', '4h'],
                 preprocessing_kwargs = dict(
@@ -286,13 +304,17 @@ def make_observation_dataset(**kwargs) -> None:
     """
     symbol = kwargs['symbols'][0]
     tf = kwargs['tfs'][0]
+    window = kwargs.pop('window')
+    logger.info(f'Start making dataset. Main symbol {symbol}_{tf}.')
     dfs = load_data_from_list(**kwargs)
+    logger.info(f'Data loaded. We have {len(dfs)}')
 
     # find min and max date over dfs
     min_dates = []
     for df in dfs:
         min_dates.append(df['date'].min())
     min_date = max(min_dates)
+    logger.info(f'Min date {min_date}')
 
     # shrink dataset so that the minimum date is the same
     dfs2 = []
@@ -301,11 +323,26 @@ def make_observation_dataset(**kwargs) -> None:
     dfs = dfs2
 
     dataset = []
-    window = 100
     length = len(dfs[0]) - window
-    for i in range(1600+window+1, window+length):
+    biggest_tf_in_minute = timeframes_in_minutes[kwargs['tfs'][-1]]
+    lowest_tf_in_minute = timeframes_in_minutes[kwargs['tfs'][0]]
+
+   # offset needed for no NaN values in dataset 
+    offset = int(biggest_tf_in_minute * window / lowest_tf_in_minute)
+    logger.info(f'Offset {offset} for no NaN values in dataset.')
+
+    time_arr = []
+    range_len = length - offset - 1
+    k = 0
+    for i in range(offset + window + 1, window + length):
+        start = datetime.now()
         a = make_observation_window(dfs, date=dfs[0].iloc[i][0], window=window)
         dataset.append(a)
+        spend_time = (datetime.now() - start).total_seconds()
+        time_arr.append(spend_time)
+        if k % 1000 == 0:
+            logger.info(f'{k}:{range_len} time left {int(np.array(time_arr).mean() * (range_len - k))} sec.')
+        k += 1
     
     dataset = np.array(dataset)
 
@@ -316,6 +353,7 @@ def make_observation_dataset(**kwargs) -> None:
         coords={'date': date},
         dims=['date', 'n', 'channel']
     )
-    dataset_path =f'{get_directory_path()}/data/{symbol}_{tf}.nc' 
+    shape = f'{dataset.shape[1]}x{dataset.shape[2]}'
+    dataset_path =f'{get_directory_path()}/data/{symbol}_{tf}_{shape}.nc' 
     dataset.to_netcdf(dataset_path)
     logger.info(f'Observation dataset saved to {dataset_path}')

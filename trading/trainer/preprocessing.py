@@ -28,8 +28,11 @@ def minmax_scale_array_global(arr:np.ndarray | pd.DataFrame, feature_range=(0, 1
     global_min = np.min(arr)
     global_max = np.max(arr)
     
-    scaled_arr = (arr - global_min) * (max_val - min_val) / (global_max - global_min) + min_val
-    return scaled_arr if input_array else pd.DataFrame(scaled_arr, columns=cols)
+    if global_max - global_min != 0:
+        scaled_arr = (arr - global_min) * (max_val - min_val) / (global_max - global_min) + min_val
+        return scaled_arr if input_array else pd.DataFrame(scaled_arr, columns=cols)
+    else:
+        return arr if input_array else pd.DataFrame(arr, columns=cols) 
 
 def extend_dataframe(df, window):
     """

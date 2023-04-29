@@ -16,7 +16,8 @@ pipeline_kwargs = dict(
     indicators=dict(
         bb=dict(price='close', period=20, deviation=2, render=False),
     ),
-    continue_learning=True,
+    continue_learning=False,
+    dataset_shape='100x6',
 )
 
 pipeline = Pipeline(**pipeline_kwargs)
