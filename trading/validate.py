@@ -5,6 +5,10 @@ import logging
 logging.basicConfig(format='%(asctime)s: %(message)s',
                     datefmt='%d/%m/%y %H:%M:%S', level=logging.INFO)
 
+"""
+    !!! Need refactor! validate function shoult return dataframe wtih main reward,
+    main pnl, pl ratio, sharp, sortiono
+"""
 
 # load data
 load_data_kwargs = dict(
