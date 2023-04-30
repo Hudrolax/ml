@@ -192,6 +192,7 @@ class Pipeline:
             result_line = [
                 symbol,
                 tf,
+                self.dataset_shape,
                 env_class,
                 tester,
                 fe,
