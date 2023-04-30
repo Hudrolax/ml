@@ -28,7 +28,7 @@ class Pipeline:
             key = e.args[0]
             logger.critical(f'Pipeline: Unexpected kwarg `{key}`')
 
-        self.result_collumns = ['symbol', 'tf', 'env', 'tester', 'extractor',
+        self.result_collumns = ['symbol', 'tf', 'dataset_shape', 'env', 'tester', 'extractor',
                                 'value_net', 'timesteps', 'mean_ep_rew', 'mean_balance',
                                 'mean_orders', 'mean_pl_ratio', 'mean_sharp', 'mean_sortino',
                                 'mean_ep_rew_rnd', 'mean_balance_rnd',
@@ -42,10 +42,11 @@ class Pipeline:
             logger.warning(f'Not found exists pipeline. Start a new one.')
             self.result = pd.DataFrame([], columns=self.result_collumns)
 
-    def _search_result(self, symbol, tf, env, tester, extractor, value_net):
+    def _search_result(self, symbol, tf, dataset_shape, env, tester, extractor, value_net):
         mask = (
             (self.result['symbol'] == symbol) &
             (self.result['tf'] == tf ) &
+            (self.result['dataset_shape'] == dataset_shape ) &
             (self.result['env'] == env) &
             (self.result['tester'] == tester) &
             (self.result['extractor'] == extractor) &
@@ -77,25 +78,6 @@ class Pipeline:
         )
 
         return make_env(**env_kwargs)
-
-    def _make_model(self, fe: str, value_net: str):
-        features_extractor = fe
-        value_net = value_net
-        model_kwargs = dict(
-            load_model=True,
-            features_extractor=features_extractor,
-            value_net=value_net,
-            save_name=f'ppo_{features_extractor}_{value_net}'
-        )
-
-    # def _loop(self):
-    #     for symbol in self.symbols:
-    #         for tf in self.tfs:
-    #             for env_class in self.env_classes:
-    #                 for tester in self.testers:
-    #                     for fe in self.features_extractors:
-    #                         for value_net in self.value_nets:
-    #                             yield symbol, tf, env_class, tester, fe, value_net
 
     def validate_model(self, env, times: int, model=None, random=False):
         m_reward = []
@@ -135,7 +117,7 @@ class Pipeline:
             logger.info(f'Fit {symbol}_{tf}, {env_class}, {tester}, {fe}, {value_net}')
 
             result_timesteps = self.total_timesteps
-            exist_result, mask = self._search_result(symbol, tf, env_class, tester, fe, value_net) 
+            exist_result, mask = self._search_result(symbol, tf, self.dataset_shape, env_class, tester, fe, value_net) 
             if len(exist_result) != 0:
                 if self.continue_learning:
                     logger.info('Result already exists. Continue learning...')
@@ -161,11 +143,12 @@ class Pipeline:
             )
 
             _load_model = True if self.continue_learning else False
+            postfix = '' if self.dataset_shape == '' else f'_{self.dataset_shape}'
             model_kwargs = dict(
                 load_model=_load_model,
                 features_extractor=fe,
                 value_net=value_net,
-                save_name=f'ppo_{fe}_{value_net}'
+                save_name=f'ppo_{fe}_{value_net}{postfix}'
             )
 
             # train model
