@@ -52,10 +52,12 @@ def get_model(**model_kwargs):
             model = PPO.load(path)
             model.set_env(env)
             message = f'Loding model from `{path}`...'
-            logger.info(f'Loding model from `{path}`...')
+            # logger.info(f'Loding model from `{path}`...')
+            print(f'Loding model from `{path}`...')
             if logger.getEffectiveLevel() >= logging.WARNING:
                 print(message)
         else:
+            print('Error loading a model.')
             raise Exception('Create new model')
     except:
         # Define a model
