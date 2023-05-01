@@ -58,7 +58,7 @@ def get_model(**model_kwargs):
                 model.set_env(env)
             except:
                 print('Error loading a model.')
-
+                raise Exception('Create new model')
         else:
             raise Exception('Create new model')
     except:
