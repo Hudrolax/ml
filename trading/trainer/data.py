@@ -137,7 +137,8 @@ def load_data(
     dataset = None
     if load_dataset:
         shape_postfix = '' if dataset_shape == '' else f'_{dataset_shape}'
-        dataset_path = f'{get_directory_path()}/data/{symbol}_{tf}{shape_postfix}.nc'
+        # dataset_path = f'{get_directory_path()}/data/{symbol}_{tf}{shape_postfix}.nc'
+        dataset_path = f'data/{symbol}_{tf}{shape_postfix}.nc'
         try:
             dataset = xr.open_dataarray(dataset_path)
             logger.debug(f'Dataset from {dataset_path} loaded.')

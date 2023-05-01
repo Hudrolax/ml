@@ -33,6 +33,10 @@ def get_model(**model_kwargs):
             raise KeyError(f'Parameter `{key}` not expected for building model.')
 
     env = model_kwargs['env']
+
+    if env.envs[0].data is None:
+        raise Exception("You are trying to get a model for env without observation dataset. Dataset is None.")
+
     load_model = model_kwargs.get('load_model', True)
     save_path = model_kwargs.get('save_path', 'best_model/')
     save_name = model_kwargs.get('save_name', 'ppo')
