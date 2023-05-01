@@ -46,16 +46,15 @@ def get_model(**model_kwargs):
     gamma = model_kwargs.get('gamma', 0.99)
     tensorboard_log = model_kwargs.get('tensorboard_log', 'tblog')
 
+    path = save_path + save_name
     try:
         if load_model:
-            path = save_path + save_name
-            model = PPO.load(path)
-            model.set_env(env)
             message = f'Loding model from `{path}`...'
-            # logger.info(f'Loding model from `{path}`...')
-            print(f'Loding model from `{path}`...')
+            logger.info(f'Loding model from `{path}`...')
             if logger.getEffectiveLevel() >= logging.WARNING:
                 print(message)
+            model = PPO.load(path)
+            model.set_env(env)
         else:
             print('Error loading a model.')
             raise Exception('Create new model')
