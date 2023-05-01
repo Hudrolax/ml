@@ -47,7 +47,7 @@ class BBTester(TesterBaseClass):
         if tick_pnl > 0:
             reward += 10
         elif tick_pnl < 0:
-            reward -= 15
+            reward -= 20
 
         # get open orders again
         open_orders = self.get_open_orders()
@@ -66,7 +66,7 @@ class BBTester(TesterBaseClass):
                     reward -= 1
 
             elif bid >= tick['bb_upper']:
-                if actions[0] > 0.5:
+                if actions[1] > 0.5:
                     risk = action['risk'] * (1 + actions[0] - 0.5)
                     self.open_order(
                         order_type=Actions.Sell,
