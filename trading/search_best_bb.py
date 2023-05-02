@@ -1,6 +1,10 @@
 from trainer.env import make_env
-from trainer.data import load_data
+from trainer.data import load_data, download_history_from_symbols_list 
 import pandas as pd
+import logging
+
+logging.basicConfig(format='%(asctime)s: %(message)s',
+                    datefmt='%d/%m/%y %H:%M:%S', level=logging.INFO)
 
 
 def check_sortiono(symbol:str, tf:str, period: int, dev: float) -> float:
@@ -13,7 +17,11 @@ def check_sortiono(symbol:str, tf:str, period: int, dev: float) -> float:
         ),
         split_validate_percent = 0,
     )
-    train_klines, val_klines, indicators, dataset = load_data(**load_data_kwargs)
+    try:
+        train_klines, val_klines, indicators, dataset = load_data(**load_data_kwargs)
+    except FileNotFoundError:
+        download_history_from_symbols_list(symbols=[symbol], tfs=[tf])
+        train_klines, val_klines, indicators, dataset = load_data(**load_data_kwargs)
 
     env_kwargs = dict(
         env_class='TradingEnv2BoxAction',

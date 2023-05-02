@@ -195,6 +195,8 @@ def load_data_from_list(symbols: str, tfs: str, preprocessing_kwargs={}) -> list
     return result
 
 def download_klines(file: str, symbol: str, timeframe: str = '15m') -> None:
+    """Function loads all accessible klines for symbol/tf"""
+
     cols = ['open_time', 'open', 'high', 'low', 'close',
             'vol', 'close_time', 'qa_vol', 'trades',]
     clients = [CMFutures, UMFutures, Spot]
