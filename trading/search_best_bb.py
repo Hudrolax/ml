@@ -83,7 +83,7 @@ def search_best_bb(
 
 if __name__ == '__main__':
     params = dict(
-        symbols = ['DOGEUSDT', 'BTCUSDT'],
+        symbols = ['DOGEUSDT'],
         tfs = ['15m', '5m', '1m'],
         per_start = 20,
         per_end = 250,
