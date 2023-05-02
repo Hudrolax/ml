@@ -398,7 +398,7 @@ class TesterBaseClass:
 
         growth_std = growth_arr.std()
         sharp = sround(mean_growth / growth_std)
-        sortino = sround(abs(negative_growth.mean() / negative_growth.std()))
+        sortino = sround(abs(mean_growth / negative_growth.std()))
 
         pnl = sround(self.balance - self.start_depo)
         pnl_percent = sround(self.balance * 100 / self.start_depo - 100)

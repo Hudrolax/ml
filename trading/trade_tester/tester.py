@@ -93,7 +93,7 @@ class BBFreeActionTester(TesterBaseClass):
         """
 
         tick = self.tick
-        bid = tick['open']
+        price = tick['open']
 
         # get open orders
         open_orders = self.get_open_orders()
@@ -103,11 +103,11 @@ class BBFreeActionTester(TesterBaseClass):
         for order in open_orders:
             if order.type == Actions.Buy:
                 # Buy
-                if bid >= tick['bb_middle'] or self.done:
+                if price >= tick['bb_middle'] or self.done:
                     tick_pnl += self.close_order(order)
             else:
                 # Sell
-                if bid <= tick['bb_middle'] or self.done:
+                if price <= tick['bb_middle'] or self.done:
                     tick_pnl += self.close_order(order)
 
         # get open orders again
@@ -115,15 +115,15 @@ class BBFreeActionTester(TesterBaseClass):
 
         # Open orders.
         if len(open_orders) == 0:
-            if bid <= tick['bb_lower']:
+            if price <= tick['bb_lower']:
                 self.open_order(
                     order_type=Actions.Buy,
-                    vol=self.balance * action['risk'] * (len(open_orders) + 1),
+                    vol=self.balance * action['risk'],
                 )
-            elif bid >= tick['bb_upper']:
+            elif price >= tick['bb_upper']:
                 self.open_order(
                     order_type=Actions.Sell,
-                    vol=self.balance * action['risk'] * (len(open_orders) + 1),
+                    vol=self.balance * action['risk'],
                 )
 
         return tick_pnl
