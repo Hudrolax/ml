@@ -22,6 +22,8 @@ class Pipeline:
             self.b_size = kwargs['b_size']
             self.batch_size = kwargs.get('batch_size', 64)
             self.n_steps = kwargs.get('n_steps', self.batch_size*100)
+            self.gamma = kwargs.get('gamma', 0.99)
+            self.gae_lambda = kwargs.get('gae_lambda', 0.99)
             self.total_timesteps = kwargs['total_timesteps']
             self.indicators = kwargs.get('indicators', {})
             self.continue_learning = kwargs.get('continue_learning', False)
@@ -153,6 +155,8 @@ class Pipeline:
                 value_net=value_net,
                 batch_size=self.batch_size,
                 n_steps=self.n_steps,
+                gamma=self.gamma,
+                gae_lambda=self.gae_lambda,
                 save_name=f'{self.label}ppo_{fe}_{value_net}{postfix}',
             )
 

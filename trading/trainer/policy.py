@@ -48,6 +48,7 @@ def get_model(**model_kwargs):
     value_net = model_kwargs.get('value_net', 'mlp_128_64')
     verbose = model_kwargs.get('verbose', 1)
     gamma = model_kwargs.get('gamma', 0.99)
+    gae_lambda = model_kwargs.get('gae_lambda', 0.99)
     tensorboard_log = model_kwargs.get('tensorboard_log', 'tblog')
 
     path = save_path + save_name
@@ -77,6 +78,7 @@ def get_model(**model_kwargs):
             env=env,
             tensorboard_log=tensorboard_log,
             gamma=gamma,
+            gae_lambda=gae_lambda,
             verbose=verbose,
             batch_size=batch_size,
             n_steps=n_steps,
