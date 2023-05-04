@@ -38,6 +38,35 @@ timeframes_in_minutes = {
     '1m': 43200,
 }
 
+def optimal_dtype(column, max_relative_error=0.01):
+    """Function select optimal dtype for pandas column"""
+    min_value, max_value = column.min(), column.max()
+    
+    if np.issubdtype(column.dtype, np.integer):
+        if min_value >= np.iinfo(np.int8).min and max_value <= np.iinfo(np.int8).max:
+            return np.int8
+        elif min_value >= np.iinfo(np.int16).min and max_value <= np.iinfo(np.int16).max:
+            return np.int16
+        elif min_value >= np.iinfo(np.int32).min and max_value <= np.iinfo(np.int32).max:
+            return np.int32
+        else:
+            return np.int64
+    else:
+        if np.allclose(column, column.astype(np.float16), rtol=max_relative_error, atol=0):
+            return np.float16
+        elif np.allclose(column, column.astype(np.float32), rtol=max_relative_error, atol=0):
+            return np.float32
+        else:
+            return np.float64
+
+def optimize_dataframe_dtypes(df, max_relative_error=0.01):
+    """Function optimize dataframe with 1% max relative"""
+    result = df.copy()
+    for col in df.columns:
+        if np.issubdtype(df[col].dtype, np.number):
+            result[col] = df[col].astype(optimal_dtype(df[col], max_relative_error))
+    return result
+
 def get_directory_path() -> str:
     script_path = os.path.abspath(sys.argv[0])
     directory_path = os.path.dirname(script_path)
@@ -173,6 +202,9 @@ def load_data(
     klines_train = klines.iloc[:train_len]
     klines_validate = klines.iloc[train_len:]
 
+    klines_train = optimize_dataframe_dtypes(klines_train)
+    klines_validate = optimize_dataframe_dtypes(klines_validate)
+
     return klines_train, klines_validate, indicators, dataset
 
 
@@ -226,6 +258,7 @@ def download_klines(file: str, symbol: str, timeframe: str = '15m') -> None:
         res = _client.klines(symbol, timeframe)
         df = pd.DataFrame(res).drop([9, 10, 11], axis=1)
         df.columns = cols
+        df
         df.to_csv(file, index=False)
         df = pd.read_csv(file)
 
