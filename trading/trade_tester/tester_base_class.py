@@ -338,6 +338,7 @@ class TesterBaseClass:
         self._tick = self.klines.iloc[self.n_tick]
         self.start_kline = start_kline
         self.orders = []
+        self.open_orders = []
         self.next_id = 1
         self.TP = TP
         self.SL = SL
@@ -423,14 +424,6 @@ class TesterBaseClass:
             'sortino': sortino,
         }
 
-    def get_open_orders(self) -> list[Order]:
-        """Returns open order list"""
-        result = []
-        for order in self.orders:
-            if not order.close:
-                result.append(order)
-        return result
-
     def _order_pnl(self, order: Order) -> tuple[float, float]:
         _fee = self._long_market_fee if order.type == Actions.Buy else self._short_market_fee
         _close = order.close if order.close else self._tick['open']
@@ -449,6 +442,8 @@ class TesterBaseClass:
 
         order.pnl, order.pnl_percent = self._order_pnl(order)
         self.balance += order.pnl
+        self.orders.append(order)
+        self.open_orders.remove(order)
 
         return order.pnl
 
@@ -477,25 +472,20 @@ class TesterBaseClass:
             TP=TP,
             SL=SL,
         )
-        self.orders.append(order)
+        self.open_orders.append(order)
         self.next_id += 1
         return order
 
     def on_tick(self, *args, **kwargs) -> ...:
-        if self.n_tick > self._last_tick:
-            """ End of episode """
-            raise Exception(
-                f'n_tick error! n_tick={self.n_tick} but length of klines is {len(self.klines)}')
-
         self._tick = self.klines.iloc[self.n_tick]
         self.n_tick += 1
 
-        # get open orders
-        open_orders = self.get_open_orders()
+        # check Done
+        self.check_done()
 
         # Calculate P&L
         general_pnl = 0
-        for order in open_orders:
+        for order in self.open_orders:
             order.pnl, _ = self._order_pnl(order)
             general_pnl += order.pnl
         self.equity.append(self.balance + general_pnl)
@@ -503,19 +493,16 @@ class TesterBaseClass:
         # margin call if depo <= 20%
         if self.balance <= self.start_depo * 0.2:
             self.margin_call = True
+        
+        if self.margin_call:
+            result = -100
 
-        result = self._on_tick(*args, **kwargs)
-
-        # check Done
-        self.check_done()
+        reward = self._on_tick(*args, **kwargs)
 
         if self.done and self.do_render:
             self.render()
 
-        if self.margin_call:
-            result = -max(self.equity)
-
-        return result
+        return reward
 
     def _on_tick(self) -> ...:
         """

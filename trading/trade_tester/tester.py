@@ -23,18 +23,9 @@ class BBTester(TesterBaseClass):
         bid = tick['open']
         actions = action['action']
 
-        if not isinstance(actions, np.ndarray):
-            raise ValueError(f'actions must be a ndarray. Actions is {actions}')
-        
-        assert isinstance(actions[0], np.float32)
-        assert isinstance(actions[1], np.float32)
-
-        # get open orders
-        open_orders = self.get_open_orders()
-
         # close open orders
         tick_pnl = 0
-        for order in open_orders:
+        for order in self.open_orders:
             if order.type == Actions.Buy:
                 # Buy
                 if bid >= tick['bb_middle'] or self.done:
@@ -49,18 +40,15 @@ class BBTester(TesterBaseClass):
         elif tick_pnl < 0:
             reward -= 20
 
-        # get open orders again
-        open_orders = self.get_open_orders()
-
         # Open orders.
-        if len(open_orders) == 0:
+        if len(self.open_orders) == 0:
 
             if bid <= tick['bb_lower']:
                 if actions[0] > 0.5:
                     risk = action['risk'] * (1 + actions[0] - 0.5)
                     self.open_order(
                         order_type=Actions.Buy,
-                        vol=self.balance * risk * (len(open_orders) + 1),
+                        vol=self.balance * risk,
                     )
                 else:
                     reward -= 1
@@ -70,11 +58,10 @@ class BBTester(TesterBaseClass):
                     risk = action['risk'] * (1 + actions[0] - 0.5)
                     self.open_order(
                         order_type=Actions.Sell,
-                        vol=self.balance * risk * (len(open_orders) + 1),
+                        vol=self.balance * risk,
                     )
                 else:
                     reward -= 1
-
         return reward
 
 
@@ -95,12 +82,9 @@ class BBFreeActionTester(TesterBaseClass):
         tick = self.tick
         price = tick['open']
 
-        # get open orders
-        open_orders = self.get_open_orders()
-
         # close open orders
         tick_pnl = 0
-        for order in open_orders:
+        for order in self.open_orders:
             if order.type == Actions.Buy:
                 # Buy
                 if price >= tick['bb_middle'] or self.done:
@@ -110,11 +94,8 @@ class BBFreeActionTester(TesterBaseClass):
                 if price <= tick['bb_middle'] or self.done:
                     tick_pnl += self.close_order(order)
 
-        # get open orders again
-        open_orders = self.get_open_orders()
-
         # Open orders.
-        if len(open_orders) == 0:
+        if len(self.open_orders) == 0:
             if price <= tick['bb_lower']:
                 self.open_order(
                     order_type=Actions.Buy,
@@ -127,3 +108,33 @@ class BBFreeActionTester(TesterBaseClass):
                 )
 
         return tick_pnl
+
+class BBTesterSortino(BBTester):
+    def on_tick(self, *args, **kwargs) -> ...:
+        self._tick = self.klines.iloc[self.n_tick]
+        self.n_tick += 1
+
+        # check Done
+        self.check_done()
+
+        # Calculate P&L
+        general_pnl = 0
+        for order in self.open_orders:
+            order.pnl, _ = self._order_pnl(order)
+            general_pnl += order.pnl
+        self.equity.append(self.balance + general_pnl)
+
+        # margin call if depo <= 20%
+        if self.balance <= self.start_depo * 0.2:
+            self.margin_call = True
+        
+        self._on_tick(*args, **kwargs)
+
+        reward = 0
+        if self.done and self.do_render:
+            self.render()
+
+        if self.done:
+            reward = self.info()['sortino']
+
+        return reward
