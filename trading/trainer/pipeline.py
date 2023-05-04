@@ -24,11 +24,12 @@ class Pipeline:
             self.indicators = kwargs.get('indicators', {})
             self.continue_learning = kwargs.get('continue_learning', False)
             self.dataset_shape = kwargs.get('dataset_shape', '')
+            self.label = kwargs.get('label', '')
         except KeyError as e:
             key = e.args[0]
             logger.critical(f'Pipeline: Unexpected kwarg `{key}`')
 
-        self.result_collumns = ['symbol', 'tf', 'dataset_shape', 'env', 'tester', 'extractor',
+        self.result_collumns = ['symbol', 'tf', 'dataset_shape', 'label', 'env', 'tester', 'extractor',
                                 'value_net', 'timesteps', 'mean_ep_rew', 'mean_balance',
                                 'mean_orders', 'mean_pl_ratio', 'mean_sharp', 'mean_sortino',
                                 'mean_ep_rew_rnd', 'mean_balance_rnd',
@@ -148,7 +149,7 @@ class Pipeline:
                 load_model=_load_model,
                 features_extractor=fe,
                 value_net=value_net,
-                save_name=f'ppo_{fe}_{value_net}{postfix}'
+                save_name=f'{self.label}ppo_{fe}_{value_net}{postfix}'
             )
 
             # train model
@@ -193,6 +194,7 @@ class Pipeline:
                 symbol,
                 tf,
                 self.dataset_shape,
+                self.label,
                 env_class,
                 tester,
                 fe,
