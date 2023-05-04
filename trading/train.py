@@ -8,16 +8,17 @@ pipeline_kwargs = dict(
     symbols=['DOGEUSDT'],
     tfs=['15m'],
     env_classes=['TradingEnv2BoxAction'],
-    testers=['BBTester'],
-    features_extractors=['Flatten', 'CustomCNN1dReverse', 'CustomCNN2d', 'CustomCNN1d'],
-    value_nets=['mlp_64_64', 'mlp_128_64', 'mlp_256_64'],
+    testers=['BBTesterSortino'],
+    # features_extractors=['Flatten', 'CustomCNN1dReverse', 'CustomCNN2d', 'CustomCNN1d'],
+    features_extractors=['CustomCNN2d'],
+    value_nets=['mlp_64_64'],
     b_size=3000,
-    total_timesteps=int(1e3),
+    total_timesteps=int(1e6),
     indicators=dict(
-        bb=dict(price='close', period=20, deviation=2, render=False),
+        bb=dict(price='close', period=20, deviation=1.8, render=False),
     ),
-    continue_learning=False,
-    dataset_shape='100x6',
+    continue_learning=True,
+    # dataset_shape='100x6',
 )
 
 pipeline = Pipeline(**pipeline_kwargs)
