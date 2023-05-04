@@ -42,7 +42,7 @@ def get_model(**model_kwargs):
     save_name = model_kwargs.get('save_name', 'ppo')
     lr = model_kwargs.get('lr', 3e-4)
     batch_size = model_kwargs.get('batch_size', 64)
-    n_steps = model_kwargs.get('n_steps', 3001)
+    n_steps = model_kwargs.get('n_steps', batch_size * 100)
     n_epochs = model_kwargs.get('n_epochs', 2)
     features_extractor = model_kwargs.get('features_extractor', 'Flatten')
     value_net = model_kwargs.get('value_net', 'mlp_128_64')
