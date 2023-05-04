@@ -20,6 +20,8 @@ class Pipeline:
             self.features_extractors = kwargs['features_extractors']
             self.value_nets = kwargs['value_nets']
             self.b_size = kwargs['b_size']
+            self.batch_size = kwargs.get('batch_size', 64)
+            self.n_steps = kwargs.get('n_steps', 3001)
             self.total_timesteps = kwargs['total_timesteps']
             self.indicators = kwargs.get('indicators', {})
             self.continue_learning = kwargs.get('continue_learning', False)
@@ -149,7 +151,9 @@ class Pipeline:
                 load_model=_load_model,
                 features_extractor=fe,
                 value_net=value_net,
-                save_name=f'{self.label}ppo_{fe}_{value_net}{postfix}'
+                batch_size=self.batch_size,
+                n_steps=self.n_steps,
+                save_name=f'{self.label}ppo_{fe}_{value_net}{postfix}',
             )
 
             # train model

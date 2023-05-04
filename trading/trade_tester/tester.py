@@ -138,3 +138,65 @@ class BBTesterSortino(BBTester):
             reward = self.info()['sortino']
 
         return reward
+
+
+class AIBot1(TesterBaseClass):
+    """
+        Free action AI strategy
+    """
+
+    def _on_tick(self, action: dict) -> float:
+        """
+        Handle of the next tick
+        Args:
+            action: dict:
+                action:
+                    0 - BUY / SELL (0.2/0.8) 
+                risk: float32 (percent volume of balance),
+        """
+
+        reward = 0
+        tick = self.tick
+        bid = tick['open']
+        actions = action['action']
+
+        # close open orders
+        tick_pnl = 0
+        for order in self.open_orders:
+            if order.type == Actions.Buy:
+                # Buy
+                if bid >= tick['bb_middle'] or self.done:
+                    tick_pnl += self.close_order(order)
+            else:
+                # Sell
+                if bid <= tick['bb_middle'] or self.done:
+                    tick_pnl += self.close_order(order)
+        
+        if tick_pnl > 0:
+            reward += 10
+        elif tick_pnl < 0:
+            reward -= 20
+
+        # Open orders.
+        if len(self.open_orders) == 0:
+
+            if bid <= tick['bb_lower']:
+                if actions[0] > 0.5:
+                    risk = action['risk'] * (1 + actions[0] - 0.5)
+                    self.open_order(
+                        order_type=Actions.Buy,
+                        vol=self.balance * risk,
+                    )
+                else:
+                    reward -= 1
+
+            elif bid >= tick['bb_upper']:
+                if actions[1] > 0.5:
+                    risk = action['risk'] * (1 + actions[0] - 0.5)
+                    self.open_order(
+                        order_type=Actions.Sell,
+                        vol=self.balance * risk,
+                    )
+                else:
+                    reward -= 1
+        return reward

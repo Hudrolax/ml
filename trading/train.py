@@ -13,6 +13,8 @@ pipeline_kwargs = dict(
     features_extractors=['CustomCNN2d'],
     value_nets=['mlp_64_64'],
     b_size=3000,
+    batch_size=64,
+    n_steps=3001,
     total_timesteps=int(1e6),
     indicators=dict(
         bb=dict(price='close', period=20, deviation=1.8, render=False),
