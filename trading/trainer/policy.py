@@ -26,7 +26,7 @@ def get_model(**model_kwargs):
         Model: Trained model.
     """
     expected_params = ['env', 'load_model', 'save_path', 'save_name', 'lr',
-                        'batch_size', 'n_steps', 'verbose', 'gamma', 'tensorboard_log', 'n_epochs',
+                        'batch_size', 'n_steps', 'verbose', 'gamma', 'gae_labmbda', 'tensorboard_log', 'n_epochs',
                         'features_extractor', 'value_net']
     for key in model_kwargs:
         if key not in expected_params:
