@@ -61,6 +61,7 @@ def get_model(**model_kwargs):
             try:
                 model = PPO.load(path)
                 model.set_env(env)
+                logger.info('The model loaded successfully.')
             except:
                 print('Error loading a model.')
                 raise Exception('Create new model')
