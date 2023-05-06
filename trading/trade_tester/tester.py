@@ -6,7 +6,6 @@ import numpy as np
 class BBTester(TesterBaseClass):
     """
         Bolliger bands strategy. Open and close orders by bollinger bands and action
-        Open order if action > x
     """
 
     def _on_tick(self, action: dict) -> float:
@@ -38,30 +37,29 @@ class BBTester(TesterBaseClass):
         if tick_pnl > 0:
             reward += 10
         elif tick_pnl < 0:
-            reward -= 20
+            reward -= 10
 
         # Open orders.
         if len(self.open_orders) == 0:
-
             if bid <= tick['bb_lower']:
-                if actions[0] > 0.5:
-                    risk = action['risk'] * (1 + actions[0] - 0.5)
+                if actions[0] > 0.7:
+                    risk = action['risk']
                     self.open_order(
                         order_type=Actions.Buy,
                         vol=self.balance * risk,
                     )
-                else:
-                    reward -= 1
 
             elif bid >= tick['bb_upper']:
-                if actions[1] > 0.5:
-                    risk = action['risk'] * (1 + actions[0] - 0.5)
+                if actions[0] < 0.3:
+                    risk = action['risk']
                     self.open_order(
                         order_type=Actions.Sell,
                         vol=self.balance * risk,
                     )
-                else:
+            else:
+                if action[0] > 0.7 or action[0] < 0.3:
                     reward -= 1
+
         return reward
 
 
