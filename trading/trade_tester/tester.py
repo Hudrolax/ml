@@ -57,7 +57,7 @@ class BBTester(TesterBaseClass):
                         vol=self.balance * risk,
                     )
             else:
-                if action[0] > 0.7 or action[0] < 0.3:
+                if actions[0] > 0.7 or actions[0] < 0.3:
                     reward -= 1
 
         return reward
