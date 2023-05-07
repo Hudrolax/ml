@@ -205,13 +205,14 @@ def render_candles(
 
     # make subplots
     main_chart_places = 4
-    add_specs = [*[[{}] if name != 'equity' else [{'rowspan': 2}]
-                   for name in separately_indicators]]
-    if 'equity' in separately_indicators:
-        add_specs = [*add_specs, [None]]
+    # add_specs = [*[[{}] if name != 'equity' else [{'rowspan': 2}]
+    #                for name in separately_indicators]]
+    add_specs = [*[[{}] for _ in separately_indicators]]
+    # if 'equity' in separately_indicators:
+    #     add_specs = [*add_specs, [None]]
     rows = main_chart_places + \
-        len(separately_indicators) + \
-        (1 if 'equity' in separately_indicators else 0)
+        len(separately_indicators)
+        # + (1 if 'equity' in separately_indicators else 0)
     fig_general = make_subplots(
         rows=rows,
         cols=1,
