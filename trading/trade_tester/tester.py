@@ -43,7 +43,6 @@ class BBTester(TesterBaseClass):
         if len(self.open_orders) == 0:
             if bid < tick['bb_lower']:
                 if actions[0] > 0.7:
-                    print(self.tick['date'], actions[0])
                     risk = action['risk']
                     self.open_order(
                         order_type=Actions.Buy,
@@ -52,7 +51,6 @@ class BBTester(TesterBaseClass):
 
             elif bid > tick['bb_upper']:
                 if actions[0] < 0.3:
-                    print(self.tick['date'], actions[0])
                     risk = action['risk']
                     self.open_order(
                         order_type=Actions.Sell,
