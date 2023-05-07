@@ -41,16 +41,18 @@ class BBTester(TesterBaseClass):
 
         # Open orders.
         if len(self.open_orders) == 0:
-            if bid <= tick['bb_lower']:
+            if bid < tick['bb_lower']:
                 if actions[0] > 0.7:
+                    print(self.tick['date'], actions[0])
                     risk = action['risk']
                     self.open_order(
                         order_type=Actions.Buy,
                         vol=self.balance * risk,
                     )
 
-            elif bid >= tick['bb_upper']:
+            elif bid > tick['bb_upper']:
                 if actions[0] < 0.3:
+                    print(self.tick['date'], actions[0])
                     risk = action['risk']
                     self.open_order(
                         order_type=Actions.Sell,
@@ -166,29 +168,29 @@ class BBTesterMomentalReward(TesterBaseClass):
         act = action['action'][0]
 
         # Open orders.
-        if price <= tick['bb_lower']:
+        if price < tick['bb_lower']:
             if act > 0.7:
-                next_klines = self.klines.iloc[self.n_tick:]
+                next_klines = self.klines.iloc[self.n_tick+1:]
                 mask = next_klines['open'] > next_klines['bb_middle']
                 close_kline = next_klines[mask]
                 if len(close_kline) > 0:
                     close_price = close_kline.iloc[0]['open']
                     if close_price > price:
-                        return 30
+                        reward -= 30
                     else:
-                        return -100
+                        reward -= 100
 
-        elif price >= tick['bb_upper']:
+        elif price > tick['bb_upper']:
             if act < 0.3:
-                next_klines = self.klines.iloc[self.n_tick:]
+                next_klines = self.klines.iloc[self.n_tick+1:]
                 mask = next_klines['open'] < next_klines['bb_middle']
                 close_kline = next_klines[mask]
                 if len(close_kline) > 0:
                     close_price = close_kline.iloc[0]['open']
                     if close_price < price:
-                        return 30
+                        reward += 30
                     else:
-                        return -100
+                        reward -=100
         else:
             if act > 0.7 or act < 0.3:
                 reward -= 1
