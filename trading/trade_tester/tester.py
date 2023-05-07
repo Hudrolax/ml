@@ -136,3 +136,61 @@ class BBTesterSortino(BBTester):
             reward = self.info()['sortino']
 
         return reward
+
+class BBTesterMomentalReward(TesterBaseClass):
+    """
+        Bolliger bands strategy. Open and close orders by bollinger bands and action
+        ONLY FOR TRAINING
+    """
+    def on_tick(self, *args, **kwargs) -> ...:
+        self._tick = self.klines.iloc[self.n_tick]
+        self.n_tick += 1
+
+        # check Done
+        self.check_done()
+        
+        return self._on_tick(*args, **kwargs)
+
+    def _on_tick(self, action: dict) -> float:
+        """
+        Handle of the next tick
+        Args:
+            action: dict:
+                action: float 
+                risk: float32 (percent volume of balance),
+        """
+
+        reward = 0
+        tick = self.tick
+        price = tick['open']
+        act = action['action'][0]
+
+        # Open orders.
+        if price <= tick['bb_lower']:
+            if act > 0.7:
+                next_klines = self.klines.iloc[self.n_tick:]
+                mask = next_klines['open'] > next_klines['bb_middle']
+                close_kline = next_klines[mask]
+                if len(close_kline) > 0:
+                    close_price = close_kline.iloc[0]['open']
+                    if close_price > price:
+                        return 30
+                    else:
+                        return -100
+
+        elif price >= tick['bb_upper']:
+            if act < 0.3:
+                next_klines = self.klines.iloc[self.n_tick:]
+                mask = next_klines['open'] < next_klines['bb_middle']
+                close_kline = next_klines[mask]
+                if len(close_kline) > 0:
+                    close_price = close_kline.iloc[0]['open']
+                    if close_price < price:
+                        return 30
+                    else:
+                        return -100
+        else:
+            if act > 0.7 or act < 0.3:
+                reward -= 1
+
+        return reward
