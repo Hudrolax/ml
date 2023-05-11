@@ -30,3 +30,5 @@ klines/
 
 # pipeline result
 pipeline.csv
+
+datasets/
