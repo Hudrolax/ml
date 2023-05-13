@@ -202,8 +202,8 @@ def load_data(
     klines_train = klines.iloc[:train_len]
     klines_validate = klines.iloc[train_len:]
 
-    klines_train = optimize_dataframe_dtypes(klines_train)
-    klines_validate = optimize_dataframe_dtypes(klines_validate)
+    # klines_train = optimize_dataframe_dtypes(klines_train)
+    # klines_validate = optimize_dataframe_dtypes(klines_validate)
 
     return klines_train, klines_validate, indicators, dataset
 
