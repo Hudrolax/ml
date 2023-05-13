@@ -32,3 +32,4 @@ klines/
 pipeline.csv
 
 datasets/
+*.csv
