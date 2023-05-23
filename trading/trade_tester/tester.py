@@ -3,6 +3,43 @@ from .data_classes import Actions
 import numpy as np
 
 
+class FiveKlineTester(TesterBaseClass):
+
+    def _on_tick(self, action: dict) -> float:
+        """
+        Handle of the next tick
+        Args:
+            action: dict:
+                action: float 
+                risk: float32 (percent volume of balance),
+        """
+
+        reward = 0
+        tick = self.tick
+        actions = action['action']
+
+        # close open orders
+        tick_pnl = 0
+        for order in self.open_orders:
+            if (tick['open_time'] - order.open_time).total_seconds() >= 4500:
+                tick_pnl += self.close_order(order)
+
+        if len(self.open_orders) == 0:
+            if actions[0] > 0.5:
+                risk = action['risk']
+                self.open_order(
+                    order_type=Actions.Buy,
+                    vol=self.balance * risk,
+                )
+            elif actions[0] < 0.5:
+                risk = action['risk']
+                self.open_order(
+                    order_type=Actions.Sell,
+                    vol=self.balance * risk,
+                )
+
+        return reward
+
 class BBTester(TesterBaseClass):
     """
         Bolliger bands strategy. Open and close orders by bollinger bands and action

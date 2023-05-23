@@ -79,7 +79,7 @@ def order_annotations(
         annotation = dict(
             ax=order.open_time,
             ay=order.open,
-            x=order.close_time if order.close else klines.iloc[-1]['date'],
+            x=order.close_time if order.close else klines.iloc[-1]['open_time'],
             y=order.close if order.close else klines.iloc[-1]['open'],
             xref="x",
             yref="y",
@@ -114,7 +114,7 @@ def _render_colored_candles(klines: pd.DataFrame, fig: go.Figure, prob_col: str)
         df = klines[(klines[prob_col] >= prob_ranges[n][0]) &
                     (klines[prob_col] <= prob_ranges[n][1])]
         fig.add_traces(go.Candlestick(
-            x=df['date'],
+            x=df['open_time'],
             open=df['open'],
             high=df['high'],
             low=df['low'],
@@ -138,7 +138,7 @@ def _render_colored_candles(klines: pd.DataFrame, fig: go.Figure, prob_col: str)
 def render_indicators(df: pd.DataFrame, fig: go.Figure, indicators=[]) -> go.Figure:
     for ind in indicators:
         ind_line = go.Scatter(
-            x=df['date'], y=df[ind['name']], mode='lines', line=dict(color=ind['color']))
+            x=df['open_time'], y=df[ind['name']], mode='lines', line=dict(color=ind['color']))
         fig.add_trace(ind_line, row=1, col=1)
 
     return fig
@@ -178,7 +178,7 @@ def render_candles(
     # implement main candle chart
     _colors = {'inc': incrace_color, 'dec': decrace_color}
     main_chart = go.Candlestick(
-        x=df['date'],
+        x=df['open_time'],
         open=df['open'],
         high=df['high'],
         low=df['low'],
@@ -235,7 +235,7 @@ def render_candles(
         if indicator.get('separately', False):
             fig_general.add_trace(
                 go.Scatter(
-                    x=df['date'],
+                    x=df['open_time'],
                     y=df[indicator['name']],
                     mode='lines',
                     line=dict(color=indicator['color']),
@@ -246,7 +246,7 @@ def render_candles(
             row += 1
         else:
             ind_line = go.Scatter(
-                x=df['date'], y=df[indicator['name']], mode='lines', line=dict(color=indicator['color']))
+                x=df['open_time'], y=df[indicator['name']], mode='lines', line=dict(color=indicator['color']))
             fig_general.add_trace(ind_line, row=1, col=1)
 
     if colored_deal_probability:
@@ -325,7 +325,7 @@ class TesterBaseClass:
 
         if not isinstance(klines, pd.DataFrame):
             raise Exception('klines should be a padas Dataframe.')
-        required_columns = ['date', 'open', 'close', 'high', 'low']
+        required_columns = ['open_time', 'open', 'close', 'high', 'low']
         check_required_columns(required_columns)
 
         if len(klines) == 0:
@@ -439,7 +439,7 @@ class TesterBaseClass:
     def close_order(self, order: Order) -> float:
         """Close the order"""
         order.close = self._tick['open']
-        order.close_time = self._tick['date']
+        order.close_time = self._tick['open_time']
 
         order.pnl, order.pnl_percent = self._order_pnl(order)
         self.balance += order.pnl
@@ -467,7 +467,7 @@ class TesterBaseClass:
         order = Order(
             id=self.next_id,
             type=order_type,
-            open_time=self._tick['date'],
+            open_time=self._tick['open_time'],
             open=self._tick['open'],
             vol=vol,
             TP=TP,
