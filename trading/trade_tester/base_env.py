@@ -15,7 +15,7 @@ class BaseTradingEnv(Env):
         """Env for binance futures strategy tester
         Args:
             klines (pd.Dataframe): history klines and indicators
-            data (xarray.dataraay | None): datset for making observations
+            data (xarray.dataraay | None): datset for making observations. Default None.
             risk (float): Order volume in percent of balance.
             b_size (int | None): klines batch size for tester. If None - all klines placed in tester.
             text_annotation (bool): draw text annottions
@@ -24,7 +24,6 @@ class BaseTradingEnv(Env):
         """
         super(BaseTradingEnv, self).__init__()
 
-        # 0 - Sell, 1 - Buy, 2 - Pass
         self.set_action_space()
 
         self.verbose = verbose
@@ -90,7 +89,7 @@ class BaseTradingEnv(Env):
     def _get_observations(self) -> np.ndarray:
         """Return an observation"""
         if self.data is not None:
-            obs = self.data.sel(date=self.tester._tick['date']).values
+            obs = self.data.sel(date=self.tester._tick['open_time']).values
         else:
             obs = np.array([1])
         return obs

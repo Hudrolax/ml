@@ -3,7 +3,7 @@ from binance.cm_futures import CMFutures
 from binance.spot import Spot
 import pandas as pd
 import numpy as np
-from .indicators import bollinger_bands, rsi, moving_average, average_true_range, macd, obv
+from .indicators import bollinger_bands, rsi, moving_average, average_true_range, macd, obv, stochastic
 from .preprocessing import make_observation_window
 import logging
 from time import sleep
@@ -23,6 +23,7 @@ indicator_func = {
     'atr': average_true_range,
     'macd': macd,
     'obv': obv,
+    'stochastic': stochastic,
 }
 
 timeframes_in_minutes = {
@@ -117,7 +118,7 @@ def calculate_indicators(klines: pd.DataFrame, kwargs: dict) -> tuple[pd.DataFra
         logger.warning(
             'Length of indicators list equals 0, but the data is preprocessed.')
 
-    return klines, indicators
+    return klines.dropna().reset_index(drop=True), indicators
 
 def load_data(
     path: str,
@@ -152,9 +153,8 @@ def load_data(
     # load klines data
     last_n = int(last_n)
     klines = pd.read_csv(
-        full_path)[['open_time', 'open', 'high', 'low', 'close', 'vol', 'trades']]
-    klines = klines.rename({'open_time': 'date'}, axis=1)
-    klines['date'] = pd.to_datetime(klines['date'], unit='ms')
+        full_path)[['open_time', 'open', 'high', 'low', 'close', 'volume', 'trades']]
+    klines['open_time'] = pd.to_datetime(klines['open_time'], unit='ms')
 
     # calculate indicators
     klines, indicators = calculate_indicators(
@@ -175,13 +175,13 @@ def load_data(
             logger.warning(f'Dataset file `{dataset_path}` not found.')
 
     if not dataset is None:
-        klines = klines[(klines['date'] >= dataset.date.values.min()) & (klines['date'] <= dataset.date.values.max())]
+        klines = klines[(klines['open_time'] >= dataset.date.values.min()) & (klines['open_time'] <= dataset.date.values.max())]
     else:
         if not min_date is None:
-            klines = klines[klines['date'] >= min_date]
+            klines = klines[klines['open_time'] >= min_date]
 
         if not max_date is None:
-            klines = klines[klines['date'] <= max_date]
+            klines = klines[klines['open_time'] <= max_date]
 
     klines = klines.iloc[-last_n:]
 
@@ -230,8 +230,8 @@ def download_klines(file: str, symbol: str, timeframe: str = '15m') -> None:
     """Function loads all accessible klines for symbol/tf"""
 
     cols = ['open_time', 'open', 'high', 'low', 'close',
-            'vol', 'close_time', 'qa_vol', 'trades',]
-    clients = [CMFutures, UMFutures, Spot]
+            'volume', 'close_time', 'qa_vol', 'trades',]
+    clients = [UMFutures, CMFutures, Spot]
 
     logger.info(f'Try to load history for {symbol}_{timeframe}')
 

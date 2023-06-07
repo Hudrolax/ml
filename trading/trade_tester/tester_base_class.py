@@ -7,11 +7,16 @@ from matplotlib.colors import ColorConverter
 import math
 
 
+class BaseTesterException(Exception):
+    pass
+
+
 def count_zeros(number) -> int:
     """Function counts zeros before significant digit"""
     if number >= 1 or number <= 0:
         return 0
-    return math.ceil(abs(math.log10(number))) - 1 
+    return math.ceil(abs(math.log10(number))) - 1
+
 
 def sround(x: float) -> float:
     """Smart round."""
@@ -19,6 +24,7 @@ def sround(x: float) -> float:
         return round(x, count_zeros(x) + 3)
     except ValueError:
         return 0
+
 
 def interpolate_colors(color1, color2, step):
     """
@@ -150,7 +156,6 @@ def render_candles(
         decrace_color: str = 'gray',
         orders: list[Order] | None = None,
         text_annotation: str = '',
-        colored_deal_probability: bool = False,
         prob_col: str = '',
         indicators: list[dict] = [],
 
@@ -164,7 +169,6 @@ def render_candles(
         decrace_color (str, optional): decrace candle color. Defaults to 'gray'.
         orders (list[Order] | None, optional): orders list. Defaults to None.
         text_annotation (bool, optional): Draw text annotation for deals.
-        colored_deal_probability (bool, optional): draw colored candles for deal probability. Defaults to False.
         prob_col (str, optional): probability column in dataframe. Defaults to ''.
         indicators (list, optional): Indicators list. Contain list[dict], where each element is
          {'name': 'bb', 'color': 'yellow'} Defaults to [].
@@ -172,9 +176,6 @@ def render_candles(
     Returns:
         go.Figure: chart figure
     """
-    if colored_deal_probability:
-        assert prob_col != ''
-
     # implement main candle chart
     _colors = {'inc': incrace_color, 'dec': decrace_color}
     main_chart = go.Candlestick(
@@ -212,7 +213,7 @@ def render_candles(
     #     add_specs = [*add_specs, [None]]
     rows = main_chart_places + \
         len(separately_indicators)
-        # + (1 if 'equity' in separately_indicators else 0)
+    # + (1 if 'equity' in separately_indicators else 0)
     fig_general = make_subplots(
         rows=rows,
         cols=1,
@@ -232,7 +233,9 @@ def render_candles(
     # add another charts
     row = main_chart_places + 1
     for indicator in indicators:
-        if indicator.get('separately', False):
+        if indicator.get('prob_col', None) is not None:
+            prob_col = indicator['prob_col']
+        elif indicator.get('separately', False):
             fig_general.add_trace(
                 go.Scatter(
                     x=df['open_time'],
@@ -249,7 +252,7 @@ def render_candles(
                 x=df['open_time'], y=df[indicator['name']], mode='lines', line=dict(color=indicator['color']))
             fig_general.add_trace(ind_line, row=1, col=1)
 
-    if colored_deal_probability:
+    if prob_col:
         fig_general = _render_colored_candles(df, fig_general, prob_col)
 
     # set chart parameters
@@ -320,16 +323,16 @@ class TesterBaseClass:
         def check_required_columns(colNames: list[str]) -> None:
             for colName in colNames:
                 if colName not in klines:
-                    raise Exception(
+                    raise BaseTesterException(
                         f'klines should contain a "{colName}" column.')
 
         if not isinstance(klines, pd.DataFrame):
-            raise Exception('klines should be a padas Dataframe.')
+            raise BaseTesterException('klines should be a padas Dataframe.')
         required_columns = ['open_time', 'open', 'close', 'high', 'low']
         check_required_columns(required_columns)
 
         if len(klines) == 0:
-            raise Exception('TESTER: klines length is 0!')
+            raise BaseTesterException('TESTER: klines length is 0!')
 
         self.klines = klines
         self.start_depo = depo
@@ -354,7 +357,7 @@ class TesterBaseClass:
         self.indicators = indicators
 
         for ind in self.indicators:
-            if ind['name'] not in self.klines.columns:
+            if ind.get('prob_col', None) is None and ind['name'] not in self.klines.columns:
                 raise Exception(
                     f"'{ind['name']}' is in indicators but not in klines ")
 
@@ -394,13 +397,17 @@ class TesterBaseClass:
         pnl_std = sround(np.array(orders_pnl).std())
         mean_pnl = sround(np.array(orders_pnl).mean())
 
-        growth_arr = np.diff(np.array(self.equity), n=1)
-        negative_growth = growth_arr[growth_arr < 0]
-        mean_growth = sround(growth_arr.mean())
+        # Statistic for Sharpe and Srotrino ratios
+        equity_arr = np.array(self.equity)
+        log_returns = np.log(equity_arr[1:]) - np.log(equity_arr[:-1])
+        expected_return = np.mean(log_returns)
 
-        growth_std = growth_arr.std()
-        sharp = sround(mean_growth / growth_std)
-        sortino = sround(abs(mean_growth / negative_growth.std()))
+        # Sharpe ratio
+        sharpe = sround(expected_return / log_returns.std())
+
+        # Sortino ratio
+        downside_deviation = np.sqrt(np.mean(np.minimum(0, log_returns)**2))
+        sortino = sround(expected_return / downside_deviation)
 
         pnl = sround(self.balance - self.start_depo)
         pnl_percent = sround(self.balance * 100 / self.start_depo - 100)
@@ -420,8 +427,7 @@ class TesterBaseClass:
             'ticks': self.n_tick - self.start_kline,
             'mean pnl': mean_pnl,
             'PNL_std': pnl_std,
-            'mean_growth': mean_growth,
-            'sharp': sharp,
+            'sharp': sharpe,
             'sortino': sortino,
         }
 
@@ -436,9 +442,9 @@ class TesterBaseClass:
             pnl_percent *= -1
         return pnl, pnl_percent
 
-    def close_order(self, order: Order) -> float:
+    def close_order(self, order: Order, price: float | None = None) -> float:
         """Close the order"""
-        order.close = self._tick['open']
+        order.close = self._tick['open'] if price is None else price
         order.close_time = self._tick['open_time']
 
         order.pnl, order.pnl_percent = self._order_pnl(order)
@@ -453,7 +459,14 @@ class TesterBaseClass:
         if self.margin_call or self.n_tick >= self._last_tick:
             self.done = True
 
-    def open_order(self, order_type: Actions, vol: float, TP: float = 0, SL: float = 0) -> Order:
+    def open_order(
+        self,
+        order_type: Actions,
+        vol: float,
+        TP: float = 0,
+        SL: float = 0,
+        price: float | None = None,
+    ) -> Order:
         """Open order function"""
         # set TP and SL to inf if it's not set
         if TP == 0:
@@ -468,7 +481,7 @@ class TesterBaseClass:
             id=self.next_id,
             type=order_type,
             open_time=self._tick['open_time'],
-            open=self._tick['open'],
+            open=self._tick['open'] if price is None else price,
             vol=vol,
             TP=TP,
             SL=SL,
@@ -494,7 +507,7 @@ class TesterBaseClass:
         # margin call if depo <= 20%
         if self.balance <= self.start_depo * 0.2:
             self.margin_call = True
-        
+
         if self.margin_call:
             result = -100
 

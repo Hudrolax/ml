@@ -1,8 +1,15 @@
 from trainer.data import load_data
+import pandas as pd
+import numpy as np
 
 
 indicators=dict(
     bb=dict(price='close', period=20, deviation=1.6, render=False),
+    rsi=dict(price='close'),
+    ma=dict(price='close'),
+    obv=dict(),
+    macd=dict(),
+    # atr=dict(),
 )
 
 load_data_kwargs = dict(
@@ -17,7 +24,9 @@ load_data_kwargs = dict(
 train_klines, val_klines, indicators, dataset = load_data(**load_data_kwargs)
 train_klines['bb_buy'] = 0
 train_klines['bb_sell'] = 0
+train_klines['next_5_max'] = pd.NA
 
+i = 0
 for index, row in train_klines.iterrows():
     # Buy
     if row['open'] <= row['bb_lower']:
@@ -32,5 +41,15 @@ for index, row in train_klines.iterrows():
         close_kline = train_klines[mask]
         if not close_kline.empty and close_kline.iloc[0]['open'] < row['open']:
             train_klines.loc[index, 'bb_sell'] = 1
+    
+    try:
+        if train_klines.iloc[i + 5]['ma14'] > row['close']:
+            train_klines.loc[index, 'next_5_max'] = 1
+        else:
+            train_klines.loc[index, 'next_5_max'] = 0
+    except IndexError:
+        pass
+    i += 1
 
+train_klines = train_klines.dropna()
 train_klines.to_csv('bb_dataset.csv', index=False)

@@ -5,6 +5,7 @@ import numpy as np
 def add_prefix(column_name, prefix) -> str:
     return f"{prefix}_{column_name}" if prefix else column_name
 
+
 def bollinger_bands(df, price='close', period=20, deviation=2, prefix='') -> tuple[pd.DataFrame, list]:
     """
     Calculate the Bollinger Bands for a given dataframe.
@@ -27,16 +28,20 @@ def bollinger_bands(df, price='close', period=20, deviation=2, prefix='') -> tup
     price_col = add_prefix(price, prefix)
 
     # Calculate the moving average and standard deviation
-    df_copy[add_prefix('ma', prefix)] = df_copy[price_col].rolling(window=period).mean()
-    df_copy[add_prefix('std', prefix)] = df_copy[price_col].rolling(window=period).std()
+    df_copy[add_prefix('ma', prefix)] = df_copy[price_col].rolling(
+        window=period).mean()
+    df_copy[add_prefix('std', prefix)] = df_copy[price_col].rolling(
+        window=period).std()
 
     # Calculate the Bollinger Bands
     upper_name = add_prefix('bb_upper', prefix)
     middle_name = add_prefix('bb_middle', prefix)
-    lower_name = add_prefix('bb_lower', prefix) 
-    df_copy[upper_name] = df_copy[add_prefix('ma', prefix)] + (df_copy[add_prefix('std', prefix)] * deviation)
+    lower_name = add_prefix('bb_lower', prefix)
+    df_copy[upper_name] = df_copy[add_prefix(
+        'ma', prefix)] + (df_copy[add_prefix('std', prefix)] * deviation)
     df_copy[middle_name] = df_copy[add_prefix('ma', prefix)]
-    df_copy[lower_name] = df_copy[add_prefix('ma', prefix)] - (df_copy[add_prefix('std', prefix)] * deviation)
+    df_copy[lower_name] = df_copy[add_prefix(
+        'ma', prefix)] - (df_copy[add_prefix('std', prefix)] * deviation)
 
     # Remove the temporary columns
     df_copy.drop(columns=[
@@ -45,6 +50,7 @@ def bollinger_bands(df, price='close', period=20, deviation=2, prefix='') -> tup
     ], inplace=True)
 
     return df_copy, [upper_name, middle_name, lower_name]
+
 
 def rsi(df, price='close', period=14, prefix='') -> tuple[pd.DataFrame, list]:
     """
@@ -70,15 +76,20 @@ def rsi(df, price='close', period=14, prefix='') -> tuple[pd.DataFrame, list]:
     df_copy[add_prefix('price_change', prefix)] = df_copy[price_col].diff()
 
     # Calculate the gains and losses
-    df_copy[add_prefix('gain', prefix)] = df_copy[add_prefix('price_change', prefix)].where(df_copy[add_prefix('price_change', prefix)] > 0, 0)
-    df_copy[add_prefix('loss', prefix)] = -df_copy[add_prefix('price_change', prefix)].where(df_copy[add_prefix('price_change', prefix)] < 0, 0)
+    df_copy[add_prefix('gain', prefix)] = df_copy[add_prefix(
+        'price_change', prefix)].where(df_copy[add_prefix('price_change', prefix)] > 0, 0)
+    df_copy[add_prefix('loss', prefix)] = -df_copy[add_prefix('price_change',
+                                                              prefix)].where(df_copy[add_prefix('price_change', prefix)] < 0, 0)
 
     # Calculate the average gains and losses
-    df_copy[add_prefix('avg_gain', prefix)] = df_copy[add_prefix('gain', prefix)].rolling(window=period).mean()
-    df_copy[add_prefix('avg_loss', prefix)] = df_copy[add_prefix('loss', prefix)].rolling(window=period).mean()
+    df_copy[add_prefix('avg_gain', prefix)] = df_copy[add_prefix(
+        'gain', prefix)].rolling(window=period).mean()
+    df_copy[add_prefix('avg_loss', prefix)] = df_copy[add_prefix(
+        'loss', prefix)].rolling(window=period).mean()
 
     # Calculate the Relative Strength (RS)
-    df_copy[add_prefix('rs', prefix)] = df_copy[add_prefix('avg_gain', prefix)] / df_copy[add_prefix('avg_loss', prefix)]
+    df_copy[add_prefix('rs', prefix)] = df_copy[add_prefix(
+        'avg_gain', prefix)] / df_copy[add_prefix('avg_loss', prefix)]
 
     # Calculate the Relative Strength Index (RSI)
     rsi_name = add_prefix('rsi', prefix)
@@ -95,6 +106,7 @@ def rsi(df, price='close', period=14, prefix='') -> tuple[pd.DataFrame, list]:
     ], inplace=True)
 
     return df_copy, [rsi_name]
+
 
 def moving_average(df, price='close', period=14, method='simple', prefix='') -> tuple[pd.DataFrame, list]:
     """
@@ -122,11 +134,14 @@ def moving_average(df, price='close', period=14, method='simple', prefix='') -> 
     if method.lower() == 'simple':
         df_copy[col_name] = df_copy[price_col].rolling(window=period).mean()
     elif method.lower() == 'exponential':
-        df_copy[col_name] = df_copy[price_col].ewm(span=period, adjust=False).mean()
+        df_copy[col_name] = df_copy[price_col].ewm(
+            span=period, adjust=False).mean()
     else:
-        raise ValueError("Invalid method. Available methods: 'simple', 'exponential'")
+        raise ValueError(
+            "Invalid method. Available methods: 'simple', 'exponential'")
 
     return df_copy, [col_name]
+
 
 def average_true_range(df, high='high', low='low', close='close', period=14, prefix='') -> tuple[pd.DataFrame, list]:
     """
@@ -144,6 +159,9 @@ def average_true_range(df, high='high', low='low', close='close', period=14, pre
         pd.DataFrame: Dataframe with the added ATR column containing the calculated ATR values.
         [list of col names]
     """
+    def add_prefix(column, prefix):
+        return f'{prefix}_{column}' if prefix else column
+
     # Copy the original dataframe
     df_copy = df.copy()
 
@@ -155,11 +173,12 @@ def average_true_range(df, high='high', low='low', close='close', period=14, pre
     # Calculate the true range
     tr_col = add_prefix('tr', prefix)
     df_copy[tr_col] = df_copy[high_col] - df_copy[low_col]
-    df_copy[tr_col] = df_copy[[tr_col, (df_copy[high_col] - df_copy[close_col]).abs(), (df_copy[low_col] - df_copy[close_col]).abs()]].max(axis=1)
+    df_copy[tr_col] = pd.concat([df_copy[tr_col], (df_copy[high_col] - df_copy[close_col]).abs(), (df_copy[low_col] - df_copy[close_col]).abs()], axis=1).max(axis=1)
 
     # Calculate the Average True Range (ATR)
     atr_col = add_prefix('atr', prefix)
-    df_copy[atr_col] = df_copy[add_prefix('tr', prefix)].rolling(window=period).mean()
+    df_copy[atr_col] = df_copy[add_prefix(
+        'tr', prefix)].ewm(span=period).mean() # change to ewm from rolling
 
     # Remove the temporary column
     df_copy.drop(columns=[add_prefix('tr', prefix)], inplace=True)
@@ -192,8 +211,10 @@ def macd(df, price='close', short_period=12, long_period=26, signal_period=9, pr
     # Calculate the short-term and long-term Exponential Moving Averages (EMAs)
     short_ema_name = add_prefix('short_ema', prefix)
     long_ema_name = add_prefix('long_ema', prefix)
-    df_copy[short_ema_name] = df_copy[price_col].ewm(span=short_period, adjust=False).mean()
-    df_copy[long_ema_name] = df_copy[price_col].ewm(span=long_period, adjust=False).mean()
+    df_copy[short_ema_name] = df_copy[price_col].ewm(
+        span=short_period, adjust=False).mean()
+    df_copy[long_ema_name] = df_copy[price_col].ewm(
+        span=long_period, adjust=False).mean()
 
     # Calculate the MACD line
     macd_name = add_prefix('macd', prefix)
@@ -201,7 +222,8 @@ def macd(df, price='close', short_period=12, long_period=26, signal_period=9, pr
 
     # Calculate the MACD signal line
     macd_signal_name = add_prefix('macd_signal', prefix)
-    df_copy[macd_signal_name] = df_copy[macd_name].ewm(span=signal_period, adjust=False).mean()
+    df_copy[macd_signal_name] = df_copy[macd_name].ewm(
+        span=signal_period, adjust=False).mean()
 
     # Calculate the MACD histogram
     macd_hist_name = add_prefix('macd_histogram', prefix)
@@ -212,7 +234,8 @@ def macd(df, price='close', short_period=12, long_period=26, signal_period=9, pr
 
     return df_copy, [macd_name, macd_signal_name, macd_hist_name]
 
-def obv(df, close='close', volume='vol', prefix='') -> tuple[pd.DataFrame, list]:
+
+def obv(df, close='close', volume='volume', prefix='') -> tuple[pd.DataFrame, list]:
     """
     Calculate the On Balance Volume (OBV) indicator for a given dataframe.
 
@@ -225,6 +248,9 @@ def obv(df, close='close', volume='vol', prefix='') -> tuple[pd.DataFrame, list]
     Returns:
         pd.DataFrame: Dataframe with the added OBV column containing the calculated OBV values.
     """
+    def add_prefix(column, prefix):
+        return f'{prefix}_{column}' if prefix else column
+
     # Copy the original dataframe
     df_copy = df.copy()
 
@@ -236,12 +262,66 @@ def obv(df, close='close', volume='vol', prefix='') -> tuple[pd.DataFrame, list]
     df_copy[add_prefix('return', prefix)] = df_copy[close_col].diff()
 
     # Calculate the OBV
-    df_copy[add_prefix('obv', prefix)] = np.where(df_copy[add_prefix('return', prefix)] > 0, df_copy[volume_col], 
-                                                  np.where(df_copy[add_prefix('return', prefix)] < 0, -df_copy[volume_col], 0)).cumsum()
+    obv_name = add_prefix('obv', prefix)
+    df_copy[obv_name] = (np.where(df_copy[add_prefix('return', prefix)] > 0, df_copy[volume_col],
+                                  np.where(df_copy[add_prefix('return', prefix)] < 0, -df_copy[volume_col], 0))).cumsum()
+
+    # Normalize the OBV values to range between 0 and 1
+    df_copy[obv_name] = (df_copy[obv_name] - df_copy[obv_name].min()) / (df_copy[obv_name].max() - df_copy[obv_name].min())
 
     # Remove the temporary columns
     df_copy.drop(columns=[
         add_prefix('return', prefix),
     ], inplace=True)
 
-    return df_copy, [add_prefix('obv', prefix)]
+    return df_copy, [obv_name]
+
+def stochastic(df, high='high', low='low', close='close', period=14, smooth_k=3, smooth_d=3, prefix='') -> tuple[pd.DataFrame, list]:
+    """
+    Calculate the Stochastic Oscillator for a given dataframe.
+
+    Args:
+        df (pd.DataFrame): Dataframe containing the historical data with high, low and close price columns.
+        high (str, optional): Name of the high price column to use for calculation. Defaults to 'high'.
+        low (str, optional): Name of the low price column to use for calculation. Defaults to 'low'.
+        close (str, optional): Name of the close price column to use for calculation. Defaults to 'close'.
+        period (int, optional): Period for the Stochastic Oscillator calculation. Defaults to 14.
+        smooth_k (int, optional): Period for smoothing %K. Defaults to 3.
+        smooth_d (int, optional): Period for smoothing %D. Defaults to 3.
+        prefix (str, optional): Prefix to add to the column names. Defaults to an empty string.
+
+    Returns (tuple):
+        pd.DataFrame: Dataframe with the added columns containing the calculated Stochastic Oscillator (%K and %D) values.
+        [list of col names]
+    """
+    def add_prefix(column, prefix):
+        return f'{prefix}_{column}' if prefix else column
+
+    df_copy = df.copy()
+
+    high_col = add_prefix(high, prefix)
+    low_col = add_prefix(low, prefix)
+    close_col = add_prefix(close, prefix)
+
+    # Calculate %K
+    lowest_low = df_copy[low_col].rolling(window=period).min()
+    highest_high = df_copy[high_col].rolling(window=period).max()
+    df_copy[add_prefix('k', prefix)] = 100 * \
+        ((df_copy[close_col] - lowest_low) / (highest_high - lowest_low))
+
+    # Calculate smoothed %K
+    df_copy[add_prefix('smooth_k', prefix)] = df_copy[add_prefix(
+        'k', prefix)].rolling(window=smooth_k).mean()
+
+    # Calculate smoothed %D
+    d_name = add_prefix('stochastic', prefix)
+    df_copy[d_name] = df_copy[add_prefix(
+        'smooth_k', prefix)].rolling(window=smooth_d).mean()
+
+    # Remove the temporary column
+    df_copy.drop(columns=[
+        add_prefix('k', prefix),
+        add_prefix('smooth_k', prefix),
+    ], inplace=True)
+
+    return df_copy, [add_prefix('stochastic', prefix), d_name]

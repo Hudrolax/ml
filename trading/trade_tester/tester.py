@@ -3,43 +3,6 @@ from .data_classes import Actions
 import numpy as np
 
 
-class FiveKlineTester(TesterBaseClass):
-
-    def _on_tick(self, action: dict) -> float:
-        """
-        Handle of the next tick
-        Args:
-            action: dict:
-                action: float 
-                risk: float32 (percent volume of balance),
-        """
-
-        reward = 0
-        tick = self.tick
-        actions = action['action']
-
-        # close open orders
-        tick_pnl = 0
-        for order in self.open_orders:
-            if (tick['open_time'] - order.open_time).total_seconds() >= 4500:
-                tick_pnl += self.close_order(order)
-
-        if len(self.open_orders) == 0:
-            if actions[0] > 0.5:
-                risk = action['risk']
-                self.open_order(
-                    order_type=Actions.Buy,
-                    vol=self.balance * risk,
-                )
-            elif actions[0] < 0.5:
-                risk = action['risk']
-                self.open_order(
-                    order_type=Actions.Sell,
-                    vol=self.balance * risk,
-                )
-
-        return reward
-
 class BBTester(TesterBaseClass):
     """
         Bolliger bands strategy. Open and close orders by bollinger bands and action
@@ -99,6 +62,52 @@ class BBTester(TesterBaseClass):
 
         return reward
 
+class BBFreeActionTesterLimit(TesterBaseClass):
+    """
+        Open and close orders by bollinger bands without any policy
+        Opens order on bb lines
+    """
+
+    def _on_tick(self, action: dict) -> float:
+        """
+        Handle of the next tick
+        Args:
+            action: dict:
+                action: not use,
+                risk: float32 (percent volume of balance),
+        """
+
+        tick = self.tick
+        price = tick['open']
+
+        # close open orders
+        tick_pnl = 0
+        for order in self.open_orders:
+            if order.type == Actions.Buy:
+                # Buy
+                if price >= tick['bb_middle'] or self.done:
+                    tick_pnl += self.close_order(order, tick['bb_middle'])
+            else:
+                # Sell
+                if price <= tick['bb_middle'] or self.done:
+                    tick_pnl += self.close_order(order, tick['bb_middle'])
+
+        # Open orders.
+        if len(self.open_orders) == 0:
+            if price <= tick['bb_lower']:
+                self.open_order(
+                    order_type=Actions.Buy,
+                    vol=self.balance * action['risk'],
+                    price=tick['bb_lower'],
+                )
+            elif price >= tick['bb_upper']:
+                self.open_order(
+                    order_type=Actions.Sell,
+                    vol=self.balance * action['risk'],
+                    price=tick['bb_upper'],
+                )
+
+        return tick_pnl
 
 class BBFreeActionTester(TesterBaseClass):
     """
@@ -127,6 +136,50 @@ class BBFreeActionTester(TesterBaseClass):
             else:
                 # Sell
                 if price <= tick['bb_middle'] or self.done:
+                    tick_pnl += self.close_order(order)
+
+        # Open orders.
+        if len(self.open_orders) == 0:
+            if price <= tick['bb_lower']:
+                self.open_order(
+                    order_type=Actions.Buy,
+                    vol=self.balance * action['risk'],
+                )
+            elif price >= tick['bb_upper']:
+                self.open_order(
+                    order_type=Actions.Sell,
+                    vol=self.balance * action['risk'],
+                )
+
+        return tick_pnl
+
+class BBFreeActionTesterFullBB(TesterBaseClass):
+    """
+        Open and close orders by bollinger bands without any policy.
+    """
+
+    def _on_tick(self, action: dict) -> float:
+        """
+        Handle of the next tick
+        Args:
+            action: dict:
+                action: not use,
+                risk: float32 (percent volume of balance),
+        """
+
+        tick = self.tick
+        price = tick['open']
+
+        # close open orders
+        tick_pnl = 0
+        for order in self.open_orders:
+            if order.type == Actions.Buy:
+                # Buy
+                if price >= tick['bb_upper'] or self.done:
+                    tick_pnl += self.close_order(order)
+            else:
+                # Sell
+                if price <= tick['bb_lower'] or self.done:
                     tick_pnl += self.close_order(order)
 
         # Open orders.

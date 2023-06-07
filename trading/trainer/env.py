@@ -12,7 +12,7 @@ def make_env(**make_env_kwargs) -> DummyVecEnv:
     Params:
         env_class (str): Environment classname from trade_tester.env module.
         klines (pd.DataFrame): klines data for environment.
-        data (xarray): dataset for observation
+        data (xarray DataArray | None): dataset for observation. Default None.
         b_size (int): Batch size for tester. Length of klines for transfering to the tester instance.
         tester (str): Tester class name.
         depo (int): Deposit amount for tester instance. Read tester docs.

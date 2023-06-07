@@ -1,8 +1,11 @@
 from trainer.env import make_env
-from trainer.data import load_data, download_history_from_symbols_list
+from trade_utils.data import get_raw_klines
 import pandas as pd
 from itertools import product
 import logging
+import requests
+from datetime import datetime
+from trade_tester.tester_base_class import BaseTesterException
 
 logging.basicConfig(format='%(asctime)s: %(message)s',
                     datefmt='%d/%m/%y %H:%M:%S', level=logging.INFO)
@@ -10,33 +13,28 @@ logging.basicConfig(format='%(asctime)s: %(message)s',
 
 logger = logging.getLogger(__name__)
 
+SYMBOLS_PATH = 'http://hud.net.ru:8001/symbols'
+
 def check_sortiono(symbol: str, tf: str, period: int, dev: float) -> float:
     
     logger.info(f'Star check sortino for {symbol}_{tf} period {period} dev {dev}')
     load_data_kwargs = dict(
-        path='klines/',
         symbol=symbol,
         tf=tf,
         preprocessing_kwargs=dict(
             bb=dict(period=period, render=True, deviation=dev),
         ),
-        split_validate_percent=0,
     )
-    try:
-        train_klines, val_klines, indicators, dataset = load_data(
-            **load_data_kwargs)
-    except FileNotFoundError:
-        download_history_from_symbols_list(symbols=[symbol], tfs=[tf])
-        train_klines, val_klines, indicators, dataset = load_data(
-            **load_data_kwargs)
+    klines, indicators = get_raw_klines(**load_data_kwargs)
 
-    klines = train_klines
+    actual_date = datetime.fromisoformat('2023-01-01')
+    klines = klines[klines['open_time'] >= actual_date]
 
     env_kwargs = dict(
         env_class='TradingEnv2BoxAction',
         tester='BBFreeActionTester',
         klines=klines,
-        data=dataset,
+        data=None,
         indicators=indicators,
         verbose=1,
         # b_size=1000,
@@ -65,7 +63,7 @@ def search_best_bb(
     dev_start: float,
     dev_end: float,
     dev_step: float,
-    path: str = 'sortino_search.csv',
+    path: str = 'sortino_searc2.csv',
 ) -> None:
     cols = ['symbol', 'tf', 'period', 'dev', 'sortiono']
     try:
@@ -83,30 +81,30 @@ def search_best_bb(
         if len(df[mask]) > 0:
             continue
 
-        sortino = check_sortiono(symbol=symbol, tf=tf,
-                                 period=period, dev=dev/10)
-        new = pd.DataFrame([[symbol, tf, period, dev, sortino]], columns=cols)
-        df = pd.concat([df, new])
-        df.to_csv(path, index=False)
-        print(f'Saved symbol {symbol}, tf {tf}, per={period}, dev={dev}')
+        try:
+            sortino = check_sortiono(symbol=symbol, tf=tf,
+                                     period=period, dev=dev/10)
+            new = pd.DataFrame([[symbol, tf, period, dev, sortino]], columns=cols)
+            df = pd.concat([df, new])
+            df.to_csv(path, index=False)
+            print(f'Saved symbol {symbol}, tf {tf}, per={period}, dev={dev}')
+        except BaseTesterException as ex:
+            print(ex)
+            continue
 
 
 if __name__ == '__main__':
-    from binance.um_futures import UMFutures
 
-    um_futures_client = UMFutures()
-    info = um_futures_client.exchange_info()
-
-    symbols = [symbol['symbol'] for symbol in info['symbols']]
+    symbols = requests.get(SYMBOLS_PATH).json()
 
     params = dict(
         symbols = symbols,
         tfs = ['15m'],
         per_start = 20,
-        per_end = 60,
+        per_end = 50,
         per_step = 10,
-        dev_start = 1.2,
-        dev_end = 2.1,
+        dev_start = 1.6,
+        dev_end = 2.5,
         dev_step = 0.1,
     )
     search_best_bb(**params)
